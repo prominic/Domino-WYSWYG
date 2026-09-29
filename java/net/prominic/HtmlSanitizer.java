@@ -73,6 +73,7 @@ public class HtmlSanitizer {
 	private static final Pattern MARKER = Pattern.compile("[0-9]{1,6}");
 	private static final Pattern KIND = Pattern.compile("[a-z]{1,30}");
 	private static final Pattern LIST_TYPE = Pattern.compile("[a-z]{1,12}");
+	private static final Pattern FX = Pattern.compile("(shadow|emboss|extrude)( (shadow|emboss|extrude)){0,2}");
 	private static final Pattern NOT_EDITABLE = Pattern.compile("false");
 	/* rgb()/rgba() is the only parenthesis a CSS value may hold */
 	private static final Pattern CSS_RGB = Pattern.compile("rgba?\\(\\s*[0-9.,%\\s]{1,40}\\)", Pattern.CASE_INSENSITIVE);
@@ -302,6 +303,11 @@ public class HtmlSanitizer {
 			appendPatternAttr(sb, tag, "data-tbl", MARKER);
 		} else if ("ul".equals(name) || "ol".equals(name)) {
 			appendPatternAttr(sb, tag, "data-list", LIST_TYPE); // a Notes list type
+		} else if ("hr".equals(name)) {
+			appendPatternAttr(sb, tag, "data-hr", MARKER);
+		}
+		if ("span".equals(name)) {
+			appendPatternAttr(sb, tag, "data-fx", FX); // shadow / emboss / extrude of a run
 		}
 		if ("div".equals(name) || "span".equals(name)) {
 			appendPatternAttr(sb, tag, "data-keep", MARKER);

@@ -463,6 +463,7 @@ public class RichText {
 		 * by file name - pardefs are in pardefs by id */
 		final List<Element> pictureElements = new ArrayList<>();
 		final List<Element> tableElements = new ArrayList<>();
+		final List<Element> ruleElements = new ArrayList<>();
 		final HashMap<String, Element> linkElements = new HashMap<>();
 		final HashMap<String, Element> attachmentElements = new HashMap<>();
 
@@ -559,15 +560,15 @@ public class RichText {
 					out.append("</").append(list, 0, 2).append('>');
 					list = null;
 				}
-				if ("pardef".equals(name) || "sectiontitle".equals(name)) {
-					continue;
+				if ("pardef".equals(name) || "sectiontitle".equals(name) || "cellbackground".equals(name)) {
+					continue; // a cell's background goes back with the cell (write(), table())
 				} else if ("table".equals(name)) {
 					table(e);
 				} else if ("horizrule".equals(name)) {
-					out.append("<hr>");
+					rule(e);
 				} else {
-					// a section, or a block the renderer does not know: kept whole
-					if (!"section".equals(name)) {
+					// a section, raw data, or a block the renderer does not know: kept whole
+					if (!"section".equals(name) && !"compositedata".equals(name)) {
 						unknown.add(name);
 					}
 					island(e, true, inCell, "");
@@ -615,7 +616,12 @@ public class RichText {
 					attachment(e);
 					break;
 				case "horizrule":
-					out.append("<hr>");
+					rule(e);
+					break;
+				case "compositedata":
+				case "nonxmlchar":
+					// raw CD data, a character XML cannot hold: nothing to show, kept whole
+					island(e, false, false, "");
 					break;
 				case "text":
 					inline(e); // a section title's words
@@ -703,7 +709,9 @@ public class RichText {
 					.append("\" data-kind=\"").append(kindOf(e))
 					.append("\" contenteditable=\"false\">");
 			int mark = out.length();
-			if ("section".equals(name)) {
+			if ("compositedata".equals(name) || "nonxmlchar".equals(name)) {
+				// base64 of raw records, or an unprintable character: nothing to show
+			} else if ("section".equals(name)) {
 				// shown expanded, the title bold
 				Element title = child(e, "sectiontitle");
 				if (title != null) {
@@ -723,6 +731,13 @@ public class RichText {
 			out.append("</").append(tag).append('>');
 		}
 
+		/* data-hr: the rule's place in the item, so write() gives it back with
+		 * its colour, width and height */
+		void rule(Element e) {
+			ruleElements.add(e);
+			out.append("<hr data-hr=\"").append(ruleElements.size()).append("\">");
+		}
+
 		void run(Element run) {
 			if ("true".equals(run.getAttribute("html"))) {
 				// pass-thru HTML: its text shows, the flag goes back with it
@@ -731,6 +746,7 @@ public class RichText {
 			}
 			Element font = child(run, "font");
 			StringBuilder css = new StringBuilder();
+			StringBuilder fx = new StringBuilder();
 			List<String> tags = new ArrayList<>();
 			if (font != null) {
 				String face = fontFamily(font.getAttribute("name"));
@@ -751,6 +767,9 @@ public class RichText {
 							: "superscript".equals(style) ? "sup" : "subscript".equals(style) ? "sub" : null;
 					if (tag != null) {
 						tags.add(tag);
+					} else if ("shadow".equals(style) || "emboss".equals(style) || "extrude".equals(style)) {
+						// HTML has no such effect: carried as a marker, written back
+						fx.append(fx.length() > 0 ? " " : "").append(style);
 					}
 				}
 			}
@@ -759,8 +778,16 @@ public class RichText {
 				String bg = "pink".equals(highlight) ? "#ffc0cb" : "blue".equals(highlight) ? "#add8e6" : "#ffff00";
 				css.append("background-color: ").append(bg).append("; ");
 			}
-			if (css.length() > 0) {
-				out.append("<span style=\"").append(css.toString().trim()).append("\">");
+			boolean wrap = css.length() > 0 || fx.length() > 0;
+			if (wrap) {
+				out.append("<span");
+				if (css.length() > 0) {
+					out.append(" style=\"").append(css.toString().trim()).append('"');
+				}
+				if (fx.length() > 0) {
+					out.append(" data-fx=\"").append(fx).append('"');
+				}
+				out.append('>');
 			}
 			for (String tag : tags) {
 				out.append('<').append(tag).append('>');
@@ -769,7 +796,7 @@ public class RichText {
 			for (int i = tags.size() - 1; i >= 0; i--) {
 				out.append("</").append(tags.get(i)).append('>');
 			}
-			if (css.length() > 0) {
+			if (wrap) {
 				out.append("</span>");
 			}
 		}
@@ -833,6 +860,7 @@ public class RichText {
 				island(link, false, false, "");
 				return;
 			}
+			linkElements.put(href, link); // write() gives an unchanged link back with its attributes
 			out.append("<a href=\"").append(attr(href)).append("\">");
 			inline(link);
 			out.append("</a>");
@@ -921,8 +949,8 @@ public class RichText {
 						continue;
 					}
 					Element cell = (Element) c;
-					int span = number(first(cell.getAttribute("columnspan"), cell.getAttribute("colspan")));
-					int rows = number(cell.getAttribute("rowspan"));
+					int span = spanOrOne(first(cell.getAttribute("columnspan"), cell.getAttribute("colspan")));
+					int rows = spanOrOne(cell.getAttribute("rowspan"));
 					String bw = cell.getAttribute("borderwidth");
 					if (noBorders) {
 						bw = "0px";
@@ -936,8 +964,10 @@ public class RichText {
 					if (rows > 1) {
 						out.append(" rowspan=\"").append(rows).append('"');
 					}
+					String valign = cell.getAttribute("valign");
 					out.append(" style=\"border-style: solid; border-color: ").append(border)
-							.append("; border-width: ").append(bw).append("; padding: 2px 4px; vertical-align: top");
+							.append("; border-width: ").append(bw).append("; padding: 2px 4px; vertical-align: ")
+							.append("center".equals(valign) ? "middle" : "bottom".equals(valign) ? "bottom" : "top");
 					if (col < widths.size() && !widths.get(col).isEmpty() && span <= 1) {
 						out.append("; width: ").append(widths.get(col)).append("px");
 					}
@@ -1055,7 +1085,8 @@ public class RichText {
 			return p.isEmpty() ? 1.0 : Integer.parseInt(p) / 96.0;
 		}
 
-		static int number(String s) {
+		/* a span attribute: 1 when absent or unreadable */
+		static int spanOrOne(String s) {
 			try {
 				return Integer.parseInt(s.trim());
 			} catch (Exception e) {
@@ -1804,6 +1835,8 @@ public class RichText {
 		String size = "";
 		String color = "";
 		String highlight = "";
+		/* shadow / emboss / extrude, as the run had them (data-fx) */
+		String fx = "";
 		boolean bold, italic, underline, strike, sup, sub;
 
 		Style copy() {
@@ -1812,6 +1845,7 @@ public class RichText {
 			s.size = size;
 			s.color = color;
 			s.highlight = highlight;
+			s.fx = fx;
 			s.bold = bold;
 			s.italic = italic;
 			s.underline = underline;
@@ -1822,11 +1856,11 @@ public class RichText {
 		}
 
 		String key() {
-			return name + "|" + size + "|" + color + "|" + highlight + "|" + bold + italic + underline + strike + sup + sub;
+			return name + "|" + size + "|" + color + "|" + highlight + "|" + fx + "|" + bold + italic + underline + strike + sup + sub;
 		}
 
 		boolean plain() {
-			return name.isEmpty() && size.isEmpty() && color.isEmpty() && highlight.isEmpty()
+			return name.isEmpty() && size.isEmpty() && color.isEmpty() && highlight.isEmpty() && fx.isEmpty()
 					&& !(bold || italic || underline || strike || sup || sub);
 		}
 
@@ -1848,6 +1882,9 @@ public class RichText {
 				if (on[i]) {
 					styles.append(styles.length() > 0 ? " " : "").append(names[i]);
 				}
+			}
+			if (!fx.isEmpty()) {
+				styles.append(styles.length() > 0 ? " " : "").append(fx);
 			}
 			if (styles.length() > 0) {
 				f.append(" style='").append(styles).append('\'');
@@ -2082,12 +2119,23 @@ public class RichText {
 			} else if ("table".equals(n.name)) {
 				table(n, c);
 			} else if ("hr".equals(n.name)) {
-				emitPar(pardefFor(c), "<horizrule/>");
+				emitPar(pardefFor(c), rule(n));
 			} else {
 				// div p center h1-h6 pre blockquote address, and table parts
 				// found outside a table
 				paragraph(n, c);
 			}
+		}
+
+		/* the original rule (data-hr) with its colour, width and height, else a plain one */
+		String rule(HNode hr) {
+			String n = hr.attr("data-hr");
+			if (orig != null && n.matches("[0-9]{1,6}") && Integer.parseInt(n) - 1 < orig.ruleElements.size()) {
+				StringBuilder sb = new StringBuilder();
+				xml(orig.ruleElements.get(Integer.parseInt(n) - 1), sb);
+				return sb.toString();
+			}
+			return "<horizrule/>";
 		}
 
 		/* an element that is at least one paragraph */
@@ -2481,6 +2529,13 @@ public class RichText {
 					t.color = color;
 				}
 			}
+			String fx = k.attr("data-fx");
+			if (!fx.isEmpty()) {
+				if (t == s) {
+					t = s.copy();
+				}
+				t.fx = fx;
+			}
 			HashMap<String, String> css = css(k.attr("style"));
 			if (!css.isEmpty()) {
 				if (t == s) {
@@ -2623,6 +2678,22 @@ public class RichText {
 				return;
 			}
 			Element original = orig == null ? null : orig.linkElements.get(href);
+			if (original != null && "urllink".equals(original.getNodeName())) {
+				// the link as it was (border, target, ...), its text from the page
+				par.append("<urllink");
+				org.w3c.dom.NamedNodeMap map = original.getAttributes();
+				for (int i = 0; i < map.getLength(); i++) {
+					if (!map.item(i).getNodeName().startsWith("xmlns")) {
+						par.append(' ').append(map.item(i).getNodeName()).append("='")
+								.append(xmlAttr(map.item(i).getNodeValue())).append('\'');
+					}
+				}
+				par.append('>');
+				inlineFlat(a, c, s);
+				flushRun();
+				par.append("</urllink>");
+				return;
+			}
 			if (original != null || href.startsWith("notes://")
 					|| (linkPrefix != null && href.startsWith(linkPrefix))) {
 				notesLink(a, c, s, href, original);
@@ -2729,7 +2800,7 @@ public class RichText {
 			for (HNode r : rows) {
 				int n = 0;
 				for (HNode cell : cells(r)) {
-					n += Math.max(1, number(cell.attr("colspan")));
+					n += Math.max(1, intOrZero(cell.attr("colspan")));
 				}
 				cols = Math.max(cols, n);
 			}
@@ -2738,7 +2809,7 @@ public class RichText {
 			if (!rows.isEmpty()) {
 				int col = 0;
 				for (HNode cell : cells(rows.get(0))) {
-					int span = Math.max(1, number(cell.attr("colspan")));
+					int span = Math.max(1, intOrZero(cell.attr("colspan")));
 					if (span == 1 && col < cols) {
 						widths[col] = cssPx(css(cell.attr("style")).get("width"));
 					}
@@ -2806,6 +2877,7 @@ public class RichText {
 			int rowAt = 0;
 			for (HNode r : rows) {
 				out.append("<tablerow");
+				List<Element> origCells = new ArrayList<>();
 				if (sameRows) {
 					org.w3c.dom.NamedNodeMap map = origRows.get(rowAt).getAttributes();
 					for (int i = 0; i < map.getLength(); i++) {
@@ -2814,35 +2886,74 @@ public class RichText {
 									.append(xmlAttr(map.item(i).getNodeValue())).append('\'');
 						}
 					}
+					for (Node k = origRows.get(rowAt).getFirstChild(); k != null; k = k.getNextSibling()) {
+						if (k.getNodeType() == Node.ELEMENT_NODE && "tablecell".equals(k.getNodeName())) {
+							origCells.add((Element) k);
+						}
+					}
 				}
 				rowAt++;
 				out.append('>');
-				for (HNode cell : cells(r)) {
+				List<HNode> rowCells = cells(r);
+				boolean sameCells = origCells.size() == rowCells.size();
+				int cellAt = 0;
+				for (HNode cell : rowCells) {
 					HashMap<String, String> css = css(cell.attr("style"));
-					out.append("<tablecell");
-					int span = number(cell.attr("colspan"));
-					if (span > 1) {
-						out.append(" columnspan='").append(span).append('\'');
+					// the original cell's settings (border style and colour, margins,
+					// its background) with what the page shows laid over them
+					Element oc = sameCells ? origCells.get(cellAt) : null;
+					cellAt++;
+					java.util.LinkedHashMap<String, String> ca = new java.util.LinkedHashMap<>();
+					if (oc != null) {
+						org.w3c.dom.NamedNodeMap map = oc.getAttributes();
+						for (int i = 0; i < map.getLength(); i++) {
+							if (!map.item(i).getNodeName().startsWith("xmlns")) {
+								ca.put(map.item(i).getNodeName(), map.item(i).getNodeValue());
+							}
+						}
 					}
-					int rowspan = number(cell.attr("rowspan"));
+					int span = intOrZero(cell.attr("colspan"));
+					ca.remove("colspan");
+					if (span > 1) {
+						ca.put("columnspan", String.valueOf(span));
+					} else {
+						ca.remove("columnspan");
+					}
+					int rowspan = intOrZero(cell.attr("rowspan"));
 					if (rowspan > 1) {
-						out.append(" rowspan='").append(rowspan).append('\'');
+						ca.put("rowspan", String.valueOf(rowspan));
+					} else {
+						ca.remove("rowspan");
 					}
 					String bw = first(css.get("border-width"), "");
 					if (bw.matches("[0-9.]+px( [0-9.]+px){0,3}") && !"1px".equals(bw)) {
-						out.append(" borderwidth='").append(bw).append('\'');
+						ca.put("borderwidth", bw);
+					} else {
+						ca.remove("borderwidth");
 					}
 					String bg = color(first(css.get("background-color"), cell.attr("bgcolor")));
 					if (!bg.isEmpty()) {
-						out.append(" bgcolor='").append(bg).append('\'');
+						ca.put("bgcolor", bg);
+					} else {
+						ca.remove("bgcolor");
 					}
 					String va = first(css.get("vertical-align"), cell.attr("valign"));
 					if ("middle".equals(va) || "center".equals(va)) {
-						out.append(" valign='center'");
+						ca.put("valign", "center");
 					} else if ("bottom".equals(va)) {
-						out.append(" valign='bottom'");
+						ca.put("valign", "bottom");
+					} else {
+						ca.remove("valign");
+					}
+					out.append("<tablecell");
+					for (java.util.Map.Entry<String, String> e : ca.entrySet()) {
+						out.append(' ').append(e.getKey()).append("='").append(xmlAttr(e.getValue())).append('\'');
 					}
 					out.append('>');
+					Element background = oc == null ? null : DxlBody.child(oc, "cellbackground");
+					if (background != null) {
+						xml(background, out);
+					}
 					Ctx d = c.copy();
 					d.inCell = true;
 					d.list = "";
@@ -2949,7 +3060,8 @@ public class RichText {
 			return String.format(java.util.Locale.ROOT, "%.4fin", px / 96.0);
 		}
 
-		static int number(String s) {
+		/* an HTML span attribute: 0 when absent or unreadable */
+		static int intOrZero(String s) {
 			try {
 				return Integer.parseInt(s.trim());
 			} catch (Exception e) {
@@ -3071,7 +3183,7 @@ public class RichText {
 	/* ------------------------------------------------------------- reports */
 
 	/* the kit version, first line of every report (kit/CHANGELOG.md) */
-	public static final String VERSION = "1.0.1 (2026-09-29)";
+	public static final String VERSION = "1.0.2 (2026-09-29)";
 	private static final String KIT = "RichText kit " + VERSION;
 
 	/* a report section longer than this is cut */

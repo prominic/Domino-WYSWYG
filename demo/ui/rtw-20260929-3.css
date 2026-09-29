@@ -1,7 +1,31 @@
-/* Domino WYSIWYG 1.0.2 (2026-09-29) - the stylesheet half (guide: README.md).
-   Copyright 2026 Prominic.NET. Licensed under the Apache License, Version
-   2.0; see the LICENSE file that came with the kit.
-   Generated from the RichTextWeb application by tools/Export-Kit.ps1. */
+/* RichTextWeb - app styles (served as a CSS document via ($css)) */
+
+/* Full-screen busy overlay (element.spinner template) */
+#overlay {
+  background: rgba(255, 255, 255, 0.6);
+  z-index: 2000;
+}
+
+.spinner {
+  width: 3rem;
+  height: 3rem;
+  border: 0.4em solid #0d6efd;
+  border-top-color: transparent;
+  animation: rtw-spin 0.8s linear infinite;
+}
+
+@keyframes rtw-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* the report page: text meant to be copied as it is */
+.rich-report {
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 70vh;
+  overflow: auto;
+  font-size: 0.8rem;
+}
 
 /* ==== rich-text kit CSS ==================================================
    Copy everything down to "end of rich-text kit CSS" (kit/README.md).

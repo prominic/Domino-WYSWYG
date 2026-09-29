@@ -1,5 +1,16 @@
 # Changelog - Domino WYSIWYG
 
+## 1.0.2 - 2026-09-29
+
+More of an untouched body comes back exactly, found by probing every rich-text construct the DXL can hold:
+
+- A horizontal rule keeps its colour, width and height (it was rebuilt bare).
+- A URL link keeps its border and target frame while its address is unchanged.
+- Table cells keep their settings (row headers, alternate colours, backgrounds) while the table's shape is unchanged; a cell's vertical alignment now shows on the page and round-trips.
+- Shadow, emboss and extrude on a run round-trip (a marker on the page).
+- Raw records and characters XML cannot hold are kept without being reported as unknown, and show nothing.
+- The offline checks validate against the newest DXL DTD of the install, chosen by version number (the name order had picked 9.0.1 over 12.0).
+
 ## 1.0.1 - 2026-09-29
 
 - A picture resized in the editor could not be saved: the scaled size was written in pixels, which Domino's DXL importer refuses ("Length value is invalid") although the DTD allows it. It is written in inches, as the exporter writes it.

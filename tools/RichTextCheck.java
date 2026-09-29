@@ -197,10 +197,18 @@ public class RichTextCheck {
 			java.io.File dir = new java.io.File(root, "xmlschemas");
 			java.io.File[] files = dir.listFiles();
 			String best = null;
+			long bestVersion = -1;
 			if (files != null) {
 				for (java.io.File f : files) {
 					String n = f.getName();
-					if (n.startsWith("domino_") && n.endsWith(".dtd") && (best == null || n.compareTo(best) > 0)) best = n;
+					if (!n.startsWith("domino_") || !n.endsWith(".dtd")) continue;
+					// domino_12_0.dtd, domino_9_0_1.dtd, domino_14_5_1.dtd: the highest version, numerically
+					long version = 0;
+					for (String part : n.substring(7, n.length() - 4).split("_")) {
+						version = version * 1000 + (part.matches("[0-9]+") ? Integer.parseInt(part) : 0);
+					}
+					while (version < 1000000) version *= 1000; // 12_0 and 9_0_1 on one scale
+					if (version > bestVersion) { bestVersion = version; best = n; }
 				}
 			}
 			if (best != null) return new java.io.File(dir, best).getPath().replace('\\', '/');
@@ -264,7 +272,7 @@ public class RichTextCheck {
 				"<attachmentref displayname='brochure.png' name='brochure.png'>", "<caption>brochure.png</caption>",
 				"<jpeg>/9j/4AAQSkZJRgABAQ==</jpeg>", "leftmargin='1.5in'", "a\ttab",
 				"<font name='Times New Roman' size='12pt' style='bold'/>dasd",
-				"<urllink showborder='false' href='https://example.com'>");
+				"<urllink href='https://example.com' showborder='false'>");
 		lacks("originals written back", rt, "data-pd", "data-pic", "&#128196;", "cid:");
 		validate("untouched body", rt);
 
@@ -477,6 +485,33 @@ public class RichTextCheck {
 		String again = (String) render(render, dxlRich("Body", back), 1000000)[0];
 		check("fidelity: render(write(render)) == render", again.equals(html), again);
 
+		System.out.println("EXTRAS - rules, link attributes, effects, raw data, cell settings: shown, kept, and edited around");
+		java.util.TreeSet<String> extrasUnknown = new java.util.TreeSet<>();
+		Object[] xr = (Object[]) render.invoke(null, dxl("Body", EXTRAS), "Body", FILES, null, null, 1000000, extrasUnknown);
+		String xhtml = (String) xr[0];
+		System.out.println("        -> " + xhtml);
+		has("extras render", xhtml, "<hr data-hr=\"1\" />", "<a href=\"https://example.com\">", "<span data-fx=\"shadow\"><b>shadowed</b></span>",
+				"raw<span data-keep=\"1\" data-kind=\"compositedata\" contenteditable=\"false\"></span>data<span data-keep=\"2\" data-kind=\"nonxmlchar\" contenteditable=\"false\"></span>x",
+				"vertical-align: middle");
+		lacks("extras render", xhtml, "Yg4BAIQ", "cellbackground", "bg.gif");
+		check("extras: nothing unknown, editable", extrasUnknown.isEmpty() && reasons(xr).isEmpty(), extrasUnknown + " " + reasons(xr));
+		String xback = (String) toDxl.invoke(null, xhtml, dxl("Body", EXTRAS), "Body", FILES, null, null);
+		System.out.println("        -> " + xback);
+		for (int i = 2; i < CYCLE[2].length; i++) {
+			check("extras: untouched keeps [" + CYCLE[2][i] + "]", xback.contains(CYCLE[2][i]), xback);
+		}
+		validate("extras body", xback);
+		String extrasAgain = (String) ((Object[]) render.invoke(null, dxlRich("Body", xback), "Body", FILES, null, null, 1000000,
+				new java.util.TreeSet<String>()))[0];
+		check("extras: render(write(render)) == render", extrasAgain.equals(xhtml), extrasAgain);
+		String extrasEdited = xhtml.replace("<a href=\"https://example.com\">", "<a href=\"https://example.org/\">").replace("vertical-align: middle", "vertical-align: bottom")
+				.replace("<span data-fx=\"shadow\"><b>shadowed</b></span>", "<b>plain now</b>");
+		xback = (String) toDxl.invoke(null, extrasEdited, dxl("Body", EXTRAS), "Body", FILES, null, null);
+		has("extras edits", xback, "<urllink showborder='false' href='https://example.org/'>", "valign='bottom'", "<run><font style='bold'/>plain now</run>",
+				"rowheader='true'", "<cellbackground repeat='tile'>");
+		lacks("extras edits", xback, "targetframe='_blank'", "shadow");
+		validate("extras edited body", xback);
+
 		System.out.println("FIDELITY - what the editor changes: a list type, a resized picture, a column added, a wider table");
 		String edited = html.replace("<ol data-list=\"alphaupper\">", "<ol data-list=\"romanlower\">").replace("<ul data-list=\"check\">", "<ul data-list=\"bullet\">")
 				.replace("width=\"200\" height=\"100\" data-pic=\"1\"", "width=\"50\" height=\"25\" data-pic=\"1\"")
@@ -596,6 +631,19 @@ public class RichTextCheck {
 		return (java.util.Set<String>) r[1];
 	}
 
+	/* a rule with its settings, a URL link with a border and target, a
+	 * shadowed run, raw data, an unprintable character, a cell with border
+	 * style and colour, a background and a vertical alignment */
+	static final String EXTRAS = "<pardef id='1'/><par def='1'>rule below</par>"
+			+ "<par def='1'><horizrule color='red' width='50%' height='0.05in' use3dshading='false'/></par>"
+			+ "<par def='1'><urllink showborder='true' targetframe='_blank' href='https://example.com'><run><font color='blue'/>site</run></urllink>"
+			+ " and <run><font style='bold shadow'/>shadowed</run></par>"
+			+ "<par def='1'>raw<compositedata type='98' prevtype='65418'>Yg4BAIQAAAAAAAAAAAA=</compositedata>data<nonxmlchar value='0x1'/>x</par>"
+			+ "<table widthtype='fitmargins'><tablecolumn width='2in'/><tablecolumn width='1in'/>"
+			+ "<tablerow><tablecell rowheader='true' altbgcolor='#eeeeee' borderwidth='2px' valign='center'>"
+			+ "<cellbackground repeat='tile'><imageref name='bg.gif'/></cellbackground><pardef id='2' align='center'/><par def='2'>x</par></tablecell>"
+			+ "<tablecell><par def='2'>y</par></tablecell></tablerow></table>";
+
 	/* the fixtures the end-to-end cycle (CycleCheck + cycle-check.js) pushes
 	 * through the real editor: name, item DXL, and the DXL strings an
 	 * untouched or edited save must still write back */
@@ -603,7 +651,7 @@ public class RichTextCheck {
 			{ "screenshot", SCREENSHOT, "description='Product'", "server='CN=server/O=Example'",
 					"<attachmentref displayname='brochure.png' name='brochure.png'>",
 					"<caption>brochure.png</caption>", "<jpeg>/9j/4AAQSkZJRgABAQ==</jpeg>", "leftmargin='1.5in'", "a\ttab",
-					"<font name='Times New Roman' size='12pt' style='bold'/>dasd", "<urllink showborder='false' href='https://example.com'>" },
+					"<font name='Times New Roman' size='12pt' style='bold'/>dasd", "<urllink href='https://example.com' showborder='false'>" },
 			{ "islands", ISLANDS,
 					"<actionhotspot hotspotstyle='none'><code event='click'><formula>@Command([FileSave])</formula></code><run><font style='bold'/>Save it</run></actionhotspot>",
 					" hide='notes'/><par def=", "><section><sectiontitle color='blue' pardef='",
@@ -611,6 +659,11 @@ public class RichTextCheck {
 					"<run html='true'>&lt;b&gt;pass&lt;/b&gt;</run>", "<popup hotspotstyle='none' show='onclick'><popuptext>tip</popuptext><run>hover</run></popup>",
 					"<picture height='10px' width='10px'><cgm>AAAA</cgm></picture>", "<anchor name='here'/>",
 					"<tablecell><section><sectiontitle><text>In a cell</text></sectiontitle>" },
+			{ "extras", EXTRAS, "<horizrule color='red' height='0.05in' use3dshading='false' width='50%'/>",
+					"<urllink href='https://example.com' showborder='true' targetframe='_blank'>", "<font color='#0000ff'/>site</run>",
+					"<run><font style='bold shadow'/>shadowed</run>",
+					"raw<compositedata prevtype='65418' type='98'>Yg4BAIQAAAAAAAAAAAA=</compositedata>data<nonxmlchar value='0x1'/>x",
+					"<tablecell altbgcolor='#eeeeee' borderwidth='2px' rowheader='true' valign='center'><cellbackground repeat='tile'><imageref name='bg.gif'/></cellbackground>" },
 			{ "fidelity", FIDELITY, "list='alphaupper'", "list='check'",
 					"<table bgcolor='#ffffcc' cellborderstyle='ridge' colorstyle='solid' leftmargin='0.5in' rowdisplay='tabs' widthtype='fitmargins'><tablecolumn width='2in'/><tablecolumn width='1in'/><tablerow tablabel='Tab one'>",
 					"<picture height='50px' scaledheight='1.0417in' scaledwidth='2.0833in' width='100px'>" } };

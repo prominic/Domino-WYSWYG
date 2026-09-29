@@ -4,7 +4,7 @@ A Notes rich-text field on the web - edited from both ends. For HCL Domino web a
 
 Show a Notes rich-text field in a web page as Notes shows it, edit it in a WYSIWYG editor, and save it back **as classic Notes rich text** - so the same field can be edited from the Notes client and from the browser, and each end sees what the other did.
 
-Version 1.0.1 (2026-09-29). Java 8, tested on Domino 12. Apache License 2.0. See [CHANGELOG.md](CHANGELOG.md).
+Version 1.0.2 (2026-09-29). Java 8, tested on Domino 12. Apache License 2.0. See [CHANGELOG.md](CHANGELOG.md).
 
 ![The editor, showing a Notes body with fonts, a link, an attachment, a doclink, a picture and a table](docs/editor.png)
 
@@ -146,18 +146,21 @@ When the server refuses a save, the page comes back with the error and the edito
 | lists of any Notes type | `ul`/`ol data-list` | the same type; a type chosen in the List menu |
 | paragraph hidden in Notes | island (hidden when reading) | as it was |
 | runs: font, size, colour, styles, highlight | `span style`, `b i u s sup sub` | runs (the Default fonts by their Notes names) |
+| shadow, emboss, extrude on a run | `span data-fx` | the same effects |
+| horizontal rule | `hr data-hr` | the original rule with its colour, width, height |
 | pass-thru HTML run | island | as it was |
 | line break; tab | `br`; two em spaces | break; the tab |
 | picture (bitmaps arrive as GIF) | `img data-pic` | the original picture; resized = the same with a new scaled size; a new one as PNG/GIF/JPEG |
 | picture the browser cannot show (CGM, over the budget) | note, kept by its place | the original picture |
-| URL link | `a` | URL link; a refused scheme is an island with its text |
+| URL link | `a` | the original link with its border and target frame while its address is unchanged; else a URL link; a refused scheme is an island with its text |
 | doclink, view link, database link | a link to your page or a `notes://` URL | the original element; a new one from a `notes://` URL or a page address |
 | attachment icon | the icon linked to its file | the original icon; icon deleted = file deleted |
 | file attached in the editor | a chip | a new icon and `$FILE` |
-| table, columns, rows, cells | `table data-tbl` with widths, borders, spans, colours | the original table's and rows' settings while their counts are unchanged (a tabbed table keeps its tabs); cells from their attributes |
+| table, columns, rows, cells | `table data-tbl` with widths, borders, spans, colours, vertical alignment | the original table's, rows' and cells' settings (row headers, alternate colours, cell backgrounds) while the shape is unchanged - a tabbed table keeps its tabs; what the page shows (spans, border width, colour, alignment) laid over them |
 | section | island: expanded, title bold | as it was, contents included |
 | action hotspot, button, popup, anchor, image map | island: their visible content | as they were |
 | computed text | island "[computed text]" | as it was |
+| raw records (`compositedata`), a character XML cannot hold | island showing nothing | as they were |
 | OLE object | "[embedded object]" | - (the body is read-only) |
 | anything else | island, name in `unknownElements()` | as it was |
 
@@ -188,7 +191,9 @@ The pointers the page carries, all numbers into the document being saved:
 | `data-pd` | `div`, `li`, `p` | the paragraph's definition (pardef id) | that definition, with the alignment and indent the page shows laid over it |
 | `data-pic` | `img`, or a `span` note | the n-th picture | the picture as Notes had it (a new size becomes `scaledwidth`/`scaledheight`) |
 | `data-cap` | `span` after a picture | the picture's caption | nothing (the picture carries it) |
-| `data-tbl` | `table` | the n-th table | its settings, columns and row attributes while their counts match |
+| `data-tbl` | `table` | the n-th table | its settings, columns, row and cell attributes while the shape matches |
+| `data-hr` | `hr` | the n-th rule | the rule as it was |
+| `data-fx` | `span` | not a pointer: shadow / emboss / extrude of the run | the same effects on the run |
 | `data-list` | `ul`, `ol` | the Notes list type | that type; absent = the original's when of the same family |
 | `data-keep` + `data-kind` | `span`, `div` (`contenteditable="false"`) | the n-th island and its element name | the element verbatim (pardef ids remapped, attachments kept) |
 | `data-file` | `span` chip | a file posted as `newfileN` | a new attachment icon and `$FILE` |

@@ -1,15 +1,14 @@
-/* Domino WYSIWYG 1.0.2 (2026-09-29) - the web half (guide: README.md).
-   Copyright 2026 Prominic.NET. Licensed under the Apache License, Version
-   2.0; see the LICENSE file that came with the kit.
-   Generated from the RichTextWeb application by tools/Export-Kit.ps1;
-   improve the master there and export again.
-
-   Two parts: the kit block (a body is posted only when its editor
-   changed) and the WYSIWYG editor (contenteditable + execCommand, no
-   dependency; the toolbar uses Bootstrap 5.3 classes and Bootstrap Icons
-   as shipped). Markup: see README.md, "Template". */
+/* RichTextWeb - client JS (served as a JS document via ($js)).
+   Uses the `config` object injected by page.bottom. */
 (function () {
   "use strict";
+
+  function showSpinner(show) {
+    var overlay = document.getElementById("overlay");
+    if (!overlay) return;
+    overlay.classList.toggle("d-none", !show);
+    overlay.classList.toggle("d-flex", show);
+  }
 
   /* ==== rich-text kit: post a body only when its editor changed ========
      Self-contained - copy this block as it is (guide: RICHTEXT.md in
@@ -820,5 +819,52 @@
 
   /* ==== end of WYSIWYG editor ============================================ */
 
-  document.addEventListener("DOMContentLoaded", initRichEditors);
+  /* a Copy button: data-copy names the element whose text it copies */
+  function initCopy() {
+    document.querySelectorAll("[data-copy]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var el = document.getElementById(btn.getAttribute("data-copy"));
+        if (!el) {
+          return;
+        }
+        var done = function () {
+          btn.innerHTML = "<i class='bi bi-check-lg me-1'></i>Copied";
+        };
+        var fallback = function () {
+          var range = document.createRange();
+          range.selectNodeContents(el);
+          var sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
+          if (document.execCommand("copy")) {
+            done();
+          }
+        };
+        if (navigator.clipboard && window.isSecureContext) {
+          navigator.clipboard.writeText(el.textContent).then(done, fallback);
+        } else {
+          fallback();
+        }
+      });
+    });
+  }
+
+  /* busy overlay while a form posts - the redirect reloads the page */
+  function initForms() {
+    document.querySelectorAll("form[method=post]").forEach(function (form) {
+      form.addEventListener("submit", function () {
+        showSpinner(true);
+      });
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    initRichEditors();
+    initForms();
+    initCopy();
+  });
+  // back button (bfcache): the page comes back as it was left - overlay up
+  window.addEventListener("pageshow", function () {
+    showSpinner(false);
+  });
 })();
