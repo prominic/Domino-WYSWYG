@@ -410,13 +410,17 @@ public class RichText {
 		return new Object[] { out, body.reasons, body.pictureBytes, kept };
 	}
 
-	/* Notes' named colours (its "green" is CSS lime, its "darkgreen" CSS green) */
+	/* DXL's named colours are the CSS2 names ("Colors: as in CSS2" - the
+	 * DTD): the exporter writes #008000 as green and #00ff00 as lime (seen
+	 * live 2026-09-29). Notes' own palette names are kept as aliases. */
 	private static final HashMap<String, String> NOTES_COLORS = new HashMap<>();
 	static {
-		String[] pairs = { "black", "#000000", "white", "#ffffff", "red", "#ff0000", "green", "#00ff00",
-				"blue", "#0000ff", "magenta", "#ff00ff", "yellow", "#ffff00", "cyan", "#00ffff",
-				"darkred", "#800000", "darkgreen", "#008000", "darkblue", "#000080", "darkmagenta", "#800080",
-				"darkyellow", "#808000", "darkcyan", "#008080", "gray", "#808080", "silver", "#c0c0c0" };
+		String[] pairs = { "black", "#000000", "white", "#ffffff", "red", "#ff0000", "lime", "#00ff00",
+				"green", "#008000", "blue", "#0000ff", "navy", "#000080", "fuchsia", "#ff00ff", "purple", "#800080",
+				"yellow", "#ffff00", "olive", "#808000", "aqua", "#00ffff", "teal", "#008080", "gray", "#808080",
+				"silver", "#c0c0c0", "maroon", "#800000",
+				"magenta", "#ff00ff", "cyan", "#00ffff", "darkred", "#800000", "darkgreen", "#008000",
+				"darkblue", "#000080", "darkmagenta", "#800080", "darkyellow", "#808000", "darkcyan", "#008080" };
 		for (int i = 0; i < pairs.length; i += 2) {
 			NOTES_COLORS.put(pairs[i], pairs[i + 1]);
 		}
@@ -3183,7 +3187,7 @@ public class RichText {
 	/* ------------------------------------------------------------- reports */
 
 	/* the kit version, first line of every report (kit/CHANGELOG.md) */
-	public static final String VERSION = "1.0.2 (2026-09-29)";
+	public static final String VERSION = "1.0.3 (2026-09-29)";
 	private static final String KIT = "RichText kit " + VERSION;
 
 	/* a report section longer than this is cut */

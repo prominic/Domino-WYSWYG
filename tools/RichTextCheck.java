@@ -485,6 +485,20 @@ public class RichTextCheck {
 		String again = (String) render(render, dxlRich("Body", back), 1000000)[0];
 		check("fidelity: render(write(render)) == render", again.equals(html), again);
 
+		System.out.println("COLORS - every named colour DXL writes shows in its CSS2 value and comes back");
+		Object[] cr = (Object[]) render.invoke(null, dxl("Body", COLORS), "Body", FILES, null, null, 1000000, new java.util.TreeSet<String>());
+		String chtml = (String) cr[0];
+		has("colours render", chtml, "<span style=\"color: #008000\">green</span>", "<span style=\"color: #00ff00\">lime</span>",
+				"<span style=\"color: #800080\">purple</span>", "<span style=\"color: #ff00ff\">fuchsia</span>", "<span style=\"color: #000080\">navy</span>",
+				"<span style=\"color: #800000\">maroon</span>", "<span style=\"color: #123456\">hex</span>", " none ", " system</div>");
+		lacks("colours render", chtml, "color: none", "color: system");
+		String cback = (String) toDxl.invoke(null, chtml, dxl("Body", COLORS), "Body", FILES, null, null);
+		String[] colorsRow = cycleRow("colors");
+		for (int i = 2; i < colorsRow.length; i++) {
+			check("colours: keeps [" + colorsRow[i] + "]", cback.contains(colorsRow[i]), cback);
+		}
+		validate("colours body", cback);
+
 		System.out.println("EXTRAS - rules, link attributes, effects, raw data, cell settings: shown, kept, and edited around");
 		java.util.TreeSet<String> extrasUnknown = new java.util.TreeSet<>();
 		Object[] xr = (Object[]) render.invoke(null, dxl("Body", EXTRAS), "Body", FILES, null, null, 1000000, extrasUnknown);
@@ -497,8 +511,9 @@ public class RichTextCheck {
 		check("extras: nothing unknown, editable", extrasUnknown.isEmpty() && reasons(xr).isEmpty(), extrasUnknown + " " + reasons(xr));
 		String xback = (String) toDxl.invoke(null, xhtml, dxl("Body", EXTRAS), "Body", FILES, null, null);
 		System.out.println("        -> " + xback);
-		for (int i = 2; i < CYCLE[2].length; i++) {
-			check("extras: untouched keeps [" + CYCLE[2][i] + "]", xback.contains(CYCLE[2][i]), xback);
+		String[] extrasRow = cycleRow("extras");
+		for (int i = 2; i < extrasRow.length; i++) {
+			check("extras: untouched keeps [" + extrasRow[i] + "]", xback.contains(extrasRow[i]), xback);
 		}
 		validate("extras body", xback);
 		String extrasAgain = (String) ((Object[]) render.invoke(null, dxlRich("Body", xback), "Body", FILES, null, null, 1000000,
@@ -644,6 +659,16 @@ public class RichTextCheck {
 			+ "<cellbackground repeat='tile'><imageref name='bg.gif'/></cellbackground><pardef id='2' align='center'/><par def='2'>x</par></tablecell>"
 			+ "<tablecell><par def='2'>y</par></tablecell></tablerow></table>";
 
+	/* every named colour DXL writes (the CSS2 names), a colour of none, a system colour */
+	static final String COLORS = "<pardef id='1'/><par def='1'>"
+			+ "<run><font color='black'/>black</run> <run><font color='white'/>white</run> <run><font color='red'/>red</run> "
+			+ "<run><font color='lime'/>lime</run> <run><font color='green'/>green</run> <run><font color='blue'/>blue</run> "
+			+ "<run><font color='navy'/>navy</run> <run><font color='fuchsia'/>fuchsia</run> <run><font color='purple'/>purple</run> "
+			+ "<run><font color='yellow'/>yellow</run> <run><font color='olive'/>olive</run> <run><font color='aqua'/>aqua</run> "
+			+ "<run><font color='teal'/>teal</run> <run><font color='gray'/>gray</run> <run><font color='silver'/>silver</run> "
+			+ "<run><font color='maroon'/>maroon</run> <run><font color='#123456'/>hex</run> <run><font color='none'/>none</run> "
+			+ "<run><font color='system'/>system</run></par>";
+
 	/* the fixtures the end-to-end cycle (CycleCheck + cycle-check.js) pushes
 	 * through the real editor: name, item DXL, and the DXL strings an
 	 * untouched or edited save must still write back */
@@ -664,9 +689,20 @@ public class RichTextCheck {
 					"<run><font style='bold shadow'/>shadowed</run>",
 					"raw<compositedata prevtype='65418' type='98'>Yg4BAIQAAAAAAAAAAAA=</compositedata>data<nonxmlchar value='0x1'/>x",
 					"<tablecell altbgcolor='#eeeeee' borderwidth='2px' rowheader='true' valign='center'><cellbackground repeat='tile'><imageref name='bg.gif'/></cellbackground>" },
+			{ "colors", COLORS, "<font color='#00ff00'/>lime", "<font color='#008000'/>green", "<font color='#800080'/>purple",
+					"<font color='#ff00ff'/>fuchsia", "<font color='#000080'/>navy", "<font color='#808000'/>olive", "<font color='#008080'/>teal",
+					"<font color='#00ffff'/>aqua", "<font color='#800000'/>maroon", "<font color='#c0c0c0'/>silver", "<font color='#123456'/>hex" },
 			{ "fidelity", FIDELITY, "list='alphaupper'", "list='check'",
 					"<table bgcolor='#ffffcc' cellborderstyle='ridge' colorstyle='solid' leftmargin='0.5in' rowdisplay='tabs' widthtype='fitmargins'><tablecolumn width='2in'/><tablecolumn width='1in'/><tablerow tablabel='Tab one'>",
 					"<picture height='50px' scaledheight='1.0417in' scaledwidth='2.0833in' width='100px'>" } };
+
+	/* a CYCLE row by its fixture name */
+	static String[] cycleRow(String name) {
+		for (String[] row : CYCLE) {
+			if (row[0].equals(name)) return row;
+		}
+		throw new IllegalArgumentException(name);
+	}
 
 	static Object[] render(Method m, String dxl, int budget) throws Exception {
 		return (Object[]) m.invoke(null, dxl, "Body", FILES, "86258E200059AA43", PAGE, budget,

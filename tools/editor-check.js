@@ -44,11 +44,13 @@ const url = (p) => "file:///" + p.replace(/\\/g, "/");
 // steps - select a word, use a control - with a pause for selectionchange
 fs.writeFileSync(page, `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>
 <div class="rich-toolbar" data-editor="ed"></div>
-<div id="ed" class="rich-editor rich" contenteditable="true" data-target="h"><div data-pd="1">hello world again</div><div data-pd="1">second line</div><div>a <span data-keep="1" data-kind="actionhotspot" contenteditable="false"><b>hot</b></span> z</div><div>tab<span id="tabhere"></span>bed <a href="https://old.test/">oldlink</a> and <a href="https://gone.test/">gonelink</a> <img id="pic" src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==" width="100" height="50" data-pic="1"></div><ol><li>first</li></ol><table><tbody><tr><td style="width: 50px">c1</td><td>c2</td></tr></tbody></table></div>
+<div id="ed" class="rich-editor rich" contenteditable="true" data-target="h"><div data-pd="1">hello world again</div><div data-pd="1">second line</div><div>a <span data-keep="1" data-kind="actionhotspot" contenteditable="false"><b>hot</b></span> z</div><div>tab<span id="tabhere"></span>bed <a href="https://old.test/">oldlink</a> and <a href="https://gone.test/">gonelink</a> <img id="pic" src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==" width="100" height="50" data-pic="1"></div><ol><li>first</li></ol><table><tbody><tr><td style="width: 50px">c1</td><td>c2</td></tr></tbody></table><table id="grid"><tbody><tr><td>g11</td><td>g12</td></tr><tr><td>g21</td><td>g22</td></tr><tr><td>g31</td><td>g32</td></tr></tbody></table></div>
 <form id="page-form"><input type="hidden" id="h" name="body" disabled></form>
 <pre id="out"></pre>
 <script src="${url(script)}"></script>
 <script>
+// a script error on the page ends the run with that error, not with a timeout
+window.onerror = function (m, s, l) { document.getElementById("out").textContent = JSON.stringify({ error: m + " (line " + l + ")" }); };
 window.addEventListener("load", function () {
   var ed = document.getElementById("ed"), bar = document.querySelector(".rich-toolbar"), log = {};
   // a dialog would block the headless page: record it instead
@@ -94,6 +96,13 @@ window.addEventListener("load", function () {
     function () { select("gonelink"); }, function () { press("Remove link"); },
     function () { document.getElementById("pic").dispatchEvent(new MouseEvent("click", { bubbles: true })); },
     function () { window.__answer = "50"; press("Picture size (click a picture first)"); },
+    function () { var r = document.createRange(); var w = document.createTreeWalker(document.getElementById("grid"), NodeFilter.SHOW_TEXT), n, a, b;
+      while ((n = w.nextNode())) { if (n.nodeValue === "g11") a = n; if (n.nodeValue === "g31") b = n; }
+      r.setStart(a, 1); r.setEnd(b, 2); var s = getSelection(); s.removeAllRanges(); s.addRange(r); ed.focus(); },
+    function () { pick(2, "#add8e6"); },
+    function () { var g = document.getElementById("grid").outerHTML, c = "rgb(173, 216, 230)";
+      // three cells painted (g11, g21, g31), the other column untouched - the browser alone would paint g12 and g22 too
+      log.block = (g.split(c).length - 1) + ":" + (g.indexOf(c + ';">g11</span>') >= 0) + ":" + (g.indexOf("<td>g12</td>") >= 0) + ":" + (g.indexOf("<td>g22</td>") >= 0); },
     function () { document.getElementById("page-form").dispatchEvent(new Event("submit"));
       var h = document.getElementById("h"); log.enabled = !h.disabled; log.posted = h.value;
       try { log.draft = sessionStorage.getItem("rich-draft:ed:" + location.pathname) === h.value; } catch (e) { log.draft = "no storage"; }
@@ -143,7 +152,7 @@ async function run() {
   for (let i = 0; i < 150; i++) {
     const res = await evaluate("document.getElementById('out').textContent");
     const text = res.result && res.result.result ? res.result.result.value : "";
-    if (text) { ws.close(); return JSON.parse(text); }
+    if (text) { ws.close(); const log = JSON.parse(text); if (log.error && log.controls === undefined) throw new Error("page script error: " + log.error); return log; }
     await new Promise((r) => setTimeout(r, 200));
   }
   const where = await evaluate("JSON.stringify(window.__log)");
@@ -155,7 +164,7 @@ run().then((log) => {
   const check = (name, ok) => { console.log((ok ? "  PASS  " : "  FAIL  ") + name); if (!ok) fails++; };
   const has = (s) => (log.posted || "").indexOf(s) >= 0;
   console.log("editor check: " + script);
-  check("toolbar built: 5 selects, 24 buttons, 1 colour (" + log.controls + ")", log.controls === "5/24/1");
+  check("toolbar built: 5 selects, 23 buttons, 1 colour (" + log.controls + ")", log.controls === "5/23/1");
   check("font -> <font face>", has("<font face=\"Georgia\">"));
   check("bold -> <b>", has("<b>hello</b>"));
   check("size -> font-size in points", has("<span style=\"font-size: 18pt;\">world</span>"));
@@ -177,6 +186,7 @@ run().then((log) => {
   check("Link button edits the link at the cursor", has("<a href=\"https://new.test/\">oldlink</a>"));
   check("Remove link", has(" and gonelink ") && !has("gone.test"));
   check("Picture size: width 50, height follows, picture kept by reference", has("<img id=\"pic\" src=\"cid:p1\" width=\"50\" height=\"25\" data-pic=\"1\">"));
+  check("a selection from one cell into the cell below formats that column, whole cells, not the rows between (" + log.block + ")", log.block === "3:true:true:true");
   check("paste: markers and handlers of pasted HTML are dropped",
     has("PASTED") && ((log.posted || "").match(/data-keep="1"/g) || []).length === 1 && !has("onclick"));
   if (log.error) check("no script error: " + log.error, false);

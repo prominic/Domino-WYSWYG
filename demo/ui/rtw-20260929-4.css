@@ -77,14 +77,6 @@
   min-width: 2rem;
 }
 
-/* source mode: raw HTML as editable monospace text */
-.rich-editor.rich-source {
-  font-family: SFMono-Regular, Consolas, "Liberation Mono", monospace;
-  font-size: 0.85em;
-  white-space: pre-wrap;
-  background: #212529;
-  color: #e9ecef;
-}
 
 /* islands: Notes-only elements (hotspots, sections, computed text, pass-thru
    HTML...) shown by their content and kept whole - the server writes them

@@ -1,5 +1,12 @@
 # Changelog - Domino WYSIWYG
 
+## 1.0.3 - 2026-09-29
+
+- Named colours: DXL names colours as CSS2 does (the exporter writes `#008000` as `green` and `#00ff00` as `lime`); the kit knew only Notes' palette names, so `lime`, `purple`, `fuchsia`, `navy`, `olive`, `teal`, `aqua` and `maroon` were dropped on the page - and by the next web save - and `green` showed in the wrong shade. All sixteen names, `none` and `system` now map and round-trip; a fixture with every name is in the browser cycle.
+- The "Edit HTML source" button is gone: the editor offers Notes rich-text operations only, and HTML typed by hand had no place to go.
+- A selection that runs from one table cell into another (a column, a block of cells) is formatted as those whole cells, by row and column, as Notes does. The browser's own reading took everything between the two cells in document order, so colouring a column painted the rows between it.
+- `demo/ui` shipped three older stamps of the script and stylesheet next to the current one; the export now removes what an earlier export left behind.
+
 ## 1.0.2 - 2026-09-29
 
 More of an untouched body comes back exactly, found by probing every rich-text construct the DXL can hold:

@@ -1,4 +1,4 @@
-/* Domino WYSIWYG 1.0.2 (2026-09-29) - the stylesheet half (guide: README.md).
+/* Domino WYSIWYG 1.0.3 (2026-09-29) - the stylesheet half (guide: README.md).
    Copyright 2026 Prominic.NET. Licensed under the Apache License, Version
    2.0; see the LICENSE file that came with the kit.
    Generated from the RichTextWeb application by tools/Export-Kit.ps1. */
@@ -53,14 +53,6 @@
   min-width: 2rem;
 }
 
-/* source mode: raw HTML as editable monospace text */
-.rich-editor.rich-source {
-  font-family: SFMono-Regular, Consolas, "Liberation Mono", monospace;
-  font-size: 0.85em;
-  white-space: pre-wrap;
-  background: #212529;
-  color: #e9ecef;
-}
 
 /* islands: Notes-only elements (hotspots, sections, computed text, pass-thru
    HTML...) shown by their content and kept whole - the server writes them

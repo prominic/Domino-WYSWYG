@@ -19,7 +19,7 @@
        richTrackChanges(editors, form, htmlOf)  once, at page load
        richEdit(editor, fn)                     around each toolbar command
        richHtml(editor)                         the HTML to post (htmlOf)
-     Typing, pasting, deleting and source-mode edits fire "input"; a
+     Typing, pasting and deleting fire "input"; a
      toolbar command is compared by hand, because not every browser fires
      "input" for execCommand. */
   function richMarkChanged(editor) {
@@ -145,8 +145,7 @@
     "|",
     ["removeFormat", "eraser", "Clear formatting"],
     ["undo", "arrow-counterclockwise", "Undo"],
-    ["redo", "arrow-clockwise", "Redo"],
-    ["rich-source", "code-slash", "Edit HTML source"]
+    ["redo", "arrow-clockwise", "Redo"]
   ];
 
   /* the commands whose button lights up while the cursor is in them */
@@ -244,22 +243,7 @@
     }
   }
 
-  function toggleSource(editor, btn) {
-    if (editor.classList.contains("rich-source")) {
-      editor.innerHTML = editor.textContent;
-      editor.classList.remove("rich-source");
-      btn.classList.remove("active");
-    } else {
-      editor.textContent = editor.innerHTML;
-      editor.classList.add("rich-source");
-      btn.classList.add("active");
-    }
-  }
-
   function editorHtml(editor) {
-    if (editor.classList.contains("rich-source")) {
-      return editor.textContent;
-    }
     return richHtml(editor);
   }
 
@@ -281,16 +265,28 @@
     }
   }
 
+  /* the commands that act on the caret's place rather than on a selection */
+  var RICH_AT_CARET = /^(insert|createLink|unlink)/;
+
   function exec(state, command, value) {
-    if (state.editor.classList.contains("rich-source")) {
-      return; // formatting is inert while editing raw HTML
-    }
     restoreRange(state);
+    var cells = RICH_AT_CARET.test(command) ? null : cellBlock(state);
     richEdit(state.editor, function () {
       // tags (<b>, <font>) for everything but the highlight, which the
       // browser only makes as a background-colour span
       document.execCommand("styleWithCSS", false, command === "hiliteColor");
-      document.execCommand(command, false, value);
+      if (cells) {
+        // a selection from one cell into another: the block of cells between
+        // them, each one whole - as Notes and spreadsheets read it; the
+        // browser alone would take everything between them in document order
+        cells.forEach(function (cell) {
+          selectContents(cell);
+          document.execCommand(command, false, value);
+        });
+        selectBlock(cells);
+      } else {
+        document.execCommand(command, false, value);
+      }
     });
     saveRange(state);
     refresh(state);
@@ -299,13 +295,19 @@
   /* sizes in points: the browser's fontSize only knows 1-7, so size 7 is
      applied and turned straight into font-size: Npt */
   function setSize(state, pt) {
-    if (state.editor.classList.contains("rich-source")) {
-      return;
-    }
     restoreRange(state);
+    var cells = cellBlock(state);
     richEdit(state.editor, function () {
       document.execCommand("styleWithCSS", false, false);
-      document.execCommand("fontSize", false, "7");
+      if (cells) {
+        cells.forEach(function (cell) {
+          selectContents(cell);
+          document.execCommand("fontSize", false, "7");
+        });
+        selectBlock(cells);
+      } else {
+        document.execCommand("fontSize", false, "7");
+      }
       Array.prototype.forEach.call(state.editor.querySelectorAll("font[size='7']"), function (font) {
         var span = document.createElement("span");
         span.style.fontSize = pt + "pt";
@@ -403,10 +405,63 @@
     return cell;
   }
 
-  function tableOp(state, op) {
-    if (state.editor.classList.contains("rich-source")) {
-      return;
+  /* the rows of this table, not of a table inside one of its cells */
+  function rowsOf(table) {
+    return Array.prototype.filter.call(table.querySelectorAll("tr"), function (r) {
+      return r.closest("table") === table;
+    });
+  }
+
+  /* the block of cells a selection from one cell into another covers, by
+     row and column position - null when the selection is not that */
+  function cellBlock(state) {
+    var sel = window.getSelection();
+    if (!sel.rangeCount || sel.isCollapsed) {
+      return null;
     }
+    var range = sel.getRangeAt(0);
+    var at = function (node) {
+      var el = node.nodeType === 1 ? node : node.parentElement;
+      var cell = el && el.closest ? el.closest("td,th") : null;
+      return cell && state.editor.contains(cell) ? cell : null;
+    };
+    var a = at(range.startContainer), b = at(range.endContainer);
+    if (!a || !b || a === b || a.closest("table") !== b.closest("table")) {
+      return null;
+    }
+    var rows = rowsOf(a.closest("table"));
+    var r1 = rows.indexOf(a.parentNode), r2 = rows.indexOf(b.parentNode);
+    var c1 = columnOf(a), c2 = columnOf(b);
+    var cells = [];
+    for (var r = Math.min(r1, r2); r <= Math.max(r1, r2); r++) {
+      for (var c = Math.min(c1, c2); c <= Math.max(c1, c2); c++) {
+        var cell = cellAtColumn(rows[r], c);
+        if (cell && cells.indexOf(cell) === -1) {
+          cells.push(cell);
+        }
+      }
+    }
+    return cells;
+  }
+
+  function selectContents(cell) {
+    var range = document.createRange();
+    range.selectNodeContents(cell);
+    var sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
+  function selectBlock(cells) {
+    var range = document.createRange();
+    range.setStartBefore(cells[0].firstChild || cells[0]);
+    range.setEndAfter(cells[cells.length - 1].lastChild || cells[cells.length - 1]);
+    var sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
+  function tableOp(state, op) {
     if (op === "insert") {
       insertTable(state);
       return;
@@ -464,6 +519,46 @@
     state.range = null;
   }
 
+  /* ---- a draft across a failed save: what the editor held is stored in
+     the browser's session storage when the form is submitted, and put
+     back when the page comes back with an error (a save the server
+     refused) - the user does not lose the work. A page that loads without
+     an error drops the draft. Files attached in the draft are gone (their
+     bytes are not kept): their chips are removed and the note says so. */
+  function draftKey(editor, form) {
+    return "rich-draft:" + editor.id + ":" + (form.getAttribute("action") || location.pathname);
+  }
+
+  function storeDraft(editor, form, html) {
+    try {
+      sessionStorage.setItem(draftKey(editor, form), html);
+    } catch (e) {
+      /* storage unavailable or full: the draft is simply not kept */
+    }
+  }
+
+  function restoreDraft(editor, form, failed) {
+    var key = draftKey(editor, form), draft = null;
+    try {
+      draft = sessionStorage.getItem(key);
+      sessionStorage.removeItem(key);
+    } catch (e) {
+      return;
+    }
+    if (!draft || !failed) {
+      return;
+    }
+    var files = /data-file=/.test(draft);
+    editor.innerHTML = draft.replace(/<span[^>]*data-file=[^>]*>.*?<\/span>(&nbsp;| )?/g, "");
+    richMarkChanged(editor);
+    var note = document.createElement("p");
+    note.className = "form-text rich-draft-note";
+    note.textContent = "Your unsaved changes are back in the editor." +
+      (files ? " The files you attached must be attached again." : "");
+    var toolbar = document.querySelector(".rich-toolbar[data-editor='" + editor.id + "']");
+    (toolbar || editor).parentNode.insertBefore(note, toolbar || editor);
+  }
+
   /* ---- a file attached where the cursor is: the editor shows an icon
      (<span data-file="N">), the bytes ride a hidden field newfileN =
      "name|base64" - the server stores the file as an attachment there */
@@ -506,7 +601,7 @@
      another document's): the markers go - a data-pic or data-keep would
      point at THIS document's picture or hotspot of that number - and with
      them anything that could run */
-  var RICH_MARKERS = /^data-(keep|kind|pic|cap|pd|file|tbl)$/;
+  var RICH_MARKERS = /^data-(keep|kind|pic|cap|pd|file|tbl|hr)$/;
 
   function cleanPasted(html) {
     var box = document.createElement("template"); // inert: nothing loads or runs
@@ -542,8 +637,7 @@
 
   /* the toolbar shows what the cursor is in, as the Notes toolbar does */
   function refresh(state) {
-    var focused = document.activeElement === state.editor &&
-      !state.editor.classList.contains("rich-source");
+    var focused = document.activeElement === state.editor;
     state.buttons.forEach(function (pair) {
       pair[1].classList.toggle("active", focused && document.queryCommandState(pair[0]));
     });
@@ -669,9 +763,7 @@
       btn.setAttribute("aria-label", def[2]);
       btn.innerHTML = "<i class='bi bi-" + def[1] + "'></i>";
       btn.addEventListener("click", function () {
-        if (def[0] === "rich-source") {
-          toggleSource(state.editor, btn);
-        } else if (def[0] === "rich-picture") {
+        if (def[0] === "rich-picture") {
           saveRange(state);
           file.click();
         } else if (def[0] === "rich-file") {
@@ -710,7 +802,7 @@
       buildToolbar(toolbar, state);
       // Tab types a tab, as in Notes (Shift+Tab still leaves the editor)
       editor.addEventListener("keydown", function (e) {
-        if (e.key === "Tab" && !e.shiftKey && !editor.classList.contains("rich-source")) {
+        if (e.key === "Tab" && !e.shiftKey) {
           e.preventDefault();
           exec(state, "insertText", RICH_TAB);
         }
@@ -730,7 +822,7 @@
           return;
         }
         var html = e.clipboardData && e.clipboardData.getData("text/html");
-        if (html && /data-(keep|kind|pic|cap|pd|file|tbl)|contenteditable/i.test(html)) {
+        if (html && /data-(keep|kind|pic|cap|pd|file|tbl|hr)|contenteditable/i.test(html)) {
           e.preventDefault();
           saveRange(state);
           exec(state, "insertHTML", cleanPasted(html));
@@ -761,8 +853,19 @@
       }
       entry.editors.push(editor);
     });
+    var failed = /[?&]err=/.test(location.search);
     forms.forEach(function (entry) {
       richTrackChanges(entry.editors, entry.form, editorHtml);
+      entry.editors.forEach(function (editor) {
+        restoreDraft(editor, entry.form, failed);
+      });
+      entry.form.addEventListener("submit", function () {
+        entry.editors.forEach(function (editor) {
+          if (editor.getAttribute("data-rich-changed") === "1") {
+            storeDraft(editor, entry.form, editorHtml(editor));
+          }
+        });
+      });
     });
   }
 
