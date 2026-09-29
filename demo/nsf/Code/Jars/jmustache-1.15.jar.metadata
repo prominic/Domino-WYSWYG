@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?><note xmlns="http://www.lotus.com/dxl" class="form" maintenanceversion="1.0" replicaid="86258E8000474322" version="14.5">
+<noteinfo noteid="2ae" sequence="4" unid="8AFC08F0F83CDCFAC1258E14004833BD">
+<created><datetime dst="true">20260612T150838,37+02</datetime></created>
+<modified><datetime dst="true">20260928T145926,19+02</datetime></modified>
+<revised><datetime dst="true">20260612T151541,47+02</datetime></revised>
+<lastaccessed><datetime dst="true">20260928T145926,18+02</datetime></lastaccessed>
+<addedtofile><datetime dst="true">20260928T145926,18+02</datetime></addedtofile></noteinfo>
+<item name="$TITLE"><text>jmustache-1.15.jar</text></item>
+<item name="$Flags"><text>34567Cg~,</text></item>
+<item name="$DesignerVersion"><text>8.5.3</text></item>
+
+
+
+
+
+<item name="$FileNames" sign="true"><text>jmustache-1.15.jar</text></item></note>

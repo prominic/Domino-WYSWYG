@@ -1,0 +1,357 @@
+<?xml version='1.0' encoding='utf-8'?>
+<scriptlibrary name='req.get' xmlns='http://www.lotus.com/dxl' version='14.5'
+ maintenanceversion='1.0' replicaid='86258E8000474322' hide='v3 v4strict'
+ designerversion='8.5.3'>
+<noteinfo noteid='2a6' unid='021F251C771CB325C1258E1400301811' sequence='32'>
+<created><datetime dst='true'>20260612T104518,89+02</datetime></created>
+<modified><datetime dst='true'>20260929T111118,54+02</datetime></modified>
+<revised><datetime dst='true'>20260929T111118,53+02</datetime></revised>
+<lastaccessed><datetime dst='true'>20260929T111118,53+02</datetime></lastaccessed>
+<addedtofile><datetime dst='true'>20260928T145926,16+02</datetime></addedtofile></noteinfo>
+<code
+ event='library'><javaproject class='JavaAgent.class' codepath='c:\Program Files\HCL\Notes\Data'
+ compiledebug='true'><java name='net/prominic/req/BasePageGet.java'>package net.prominic.req;
+
+import java.util.HashMap;
+
+import lotus.domino.Database;
+import lotus.domino.Document;
+import lotus.domino.Name;
+import lotus.domino.Session;
+import net.prominic.DominoUtils;
+import net.prominic.mustache.MustacheRenderer;
+import net.prominic.web.WebRequest;
+
+public abstract class BasePageGet extends BaseAbstract {
+
+	public BasePageGet(Session session, Database database, WebRequest web) {
+		super(session, database, web);
+	}
+
+	@Override
+	public void run() throws Exception {
+		Name serverName = null;
+		try {
+			setContentType("text/html");
+			setStatus(200);
+
+			HashMap&lt;String, Object&gt; data = new HashMap&lt;&gt;();
+
+			// 1. config - the router owns this Document's lifecycle, do not
+			// recycle here.
+			Document configDoc = getConfig();
+			data.put("config", DominoUtils.docToMap(configDoc));
+
+			// 2. runtime. No app session: the router runs as the web user
+			// and Domino's ACL decides - Editor access shows the edit actions
+			HashMap&lt;String, Object&gt; runtime = new HashMap&lt;&gt;();
+			serverName = m_session.createName(m_session.getServerName());
+			runtime.put("server", serverName.getCommon());
+			data.put("runtime", runtime);
+			data.put("canEdit", canEdit());
+
+			// 3. current route + nav flags (Mustache is logic-less: equality
+			// tests like req == 'home' are precomputed here as booleans)
+			String req = m_web.getParam("req");
+			data.put("req", req);
+			data.put("nav_home", Boolean.valueOf("home".equalsIgnoreCase(req) || "page".equalsIgnoreCase(req)));
+
+			// 4. specific tags from child class
+			ownTags(data);
+
+			// a rich-text conversion that failed shows as plain text; log it
+			// once per page, not once per body
+			net.prominic.RichText rich = rich();
+			// the test bed says what the DXL renderer does not know yet
+			if (!rich.unknownElements().isEmpty()) {
+				data.put("rtUnknown", String.join(", ", rich.unknownElements()));
+			}
+			if (rich.firstError() != null) {
+				net.prominic.log.Logger.logWarning(m_database, "rich body " + rich.firstError()
+						+ " (shown as plain text; further failures on this page not logged)");
+			}
+
+			// 5. render: per-route content first ("page.&lt;req&gt;"), injected into
+			// the master "page" as {{&amp;pagecontent}} (Mustache partials are
+			// static, so the dynamic include is a two-pass render)
+			MustacheRenderer renderer = new MustacheRenderer(m_database);
+			try {
+				data.put("pagecontent", renderer.render("page." + req, data));
+				setContent(renderer.render("page", data));
+			} finally {
+				renderer.recycle();
+			}
+		} finally {
+			DominoUtils.recycle(serverName);
+			recycleRich();
+		}
+	}
+
+	protected void ownTags(HashMap&lt;String, Object&gt; data) throws Exception {
+	}
+}
+</java><java name='net/prominic/req/HomePageGet.java'>package net.prominic.req;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Vector;
+
+import lotus.domino.Database;
+import lotus.domino.DateTime;
+import lotus.domino.Session;
+import lotus.domino.View;
+import lotus.domino.ViewEntry;
+import lotus.domino.ViewNavigator;
+import net.prominic.DominoUtils;
+import net.prominic.web.WebRequest;
+
+/*
+ * GET req=home - the Pages view: ($pages), sorted by text, one row per
+ * Page with its text, date, number and creation date. The values come
+ * from the view's columns (Field1, Field2, Field3, @Created) - no document
+ * is opened for the list; the rich text is rendered on the page itself.
+ */
+public class HomePageGet extends BasePageGet {
+	/* a test database - but a list must never be unbounded */
+	private static final int MAX_ROWS = 200;
+
+	public HomePageGet(Session session, Database database, WebRequest web) {
+		super(session, database, web);
+	}
+
+	@Override
+	protected void ownTags(HashMap&lt;String, Object&gt; data) throws Exception {
+		View view = null;
+		ViewNavigator nav = null;
+		try {
+			view = m_database.getView("($pages)");
+			nav = view.createViewNav();
+			List&lt;HashMap&lt;String, Object&gt;&gt; pages = new ArrayList&lt;&gt;();
+			ViewEntry entry = nav.getFirst();
+			while (entry != null &amp;&amp; pages.size() &lt; MAX_ROWS) {
+				Vector&lt;?&gt; cols = entry.getColumnValues();
+				HashMap&lt;String, Object&gt; row = new HashMap&lt;&gt;();
+				row.put("unid", entry.getUniversalID());
+				String text = String.valueOf(cols.get(0));
+				row.put("text", text.isEmpty() ? "(no text)" : text);
+				row.put("date", cols.get(1) instanceof DateTime
+						? PagePageGet.formatDate(((DateTime) cols.get(1)).toJavaDate()) : "");
+				row.put("number", PagePageGet.formatNumber(cols.get(2)));
+				row.put("created", cols.get(3) instanceof DateTime
+						? PagePageGet.formatDate(((DateTime) cols.get(3)).toJavaDate()) : "");
+				for (Object value : cols) {
+					if (value instanceof DateTime) {
+						DominoUtils.recycle((DateTime) value);
+					}
+				}
+				pages.add(row);
+				ViewEntry next = nav.getNext(entry);
+				entry.recycle();
+				entry = next;
+			}
+			DominoUtils.recycle(entry);
+			data.put("pages", pages);
+			data.put("haspages", Boolean.valueOf(!pages.isEmpty()));
+		} finally {
+			DominoUtils.recycle(nav, view);
+		}
+	}
+}
+</java><java name='net/prominic/req/PagePageGet.java'>package net.prominic.req;
+
+import java.text.SimpleDateFormat;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Vector;
+
+import lotus.domino.Database;
+import lotus.domino.DateTime;
+import lotus.domino.Document;
+import lotus.domino.Session;
+import net.prominic.DominoUtils;
+import net.prominic.RichText;
+import net.prominic.web.WebRequest;
+
+/*
+ * GET req=page&amp;unid=&lt;unid&gt;[&amp;edit=1] - one Page document with the four
+ * field types the app supports, read, and edited with Editor access:
+ *
+ *   Field1  text       Field2  date (the form shows the date only)
+ *   Field3  number     field4  rich text - through the rich-text kit
+ *
+ * req=page&amp;edit=1 without a unid = a new page.
+ */
+public class PagePageGet extends BasePageGet {
+	/* SimpleDateFormat is not thread-safe; web agents may run concurrently */
+	private static final ThreadLocal&lt;SimpleDateFormat&gt; SHOW = new ThreadLocal&lt;SimpleDateFormat&gt;() {
+		@Override
+		protected SimpleDateFormat initialValue() {
+			return new SimpleDateFormat("d MMM yyyy", Locale.ENGLISH);
+		}
+	};
+	private static final ThreadLocal&lt;SimpleDateFormat&gt; ISO = new ThreadLocal&lt;SimpleDateFormat&gt;() {
+		@Override
+		protected SimpleDateFormat initialValue() {
+			return new SimpleDateFormat("yyyy-MM-dd");
+		}
+	};
+
+	public PagePageGet(Session session, Database database, WebRequest web) {
+		super(session, database, web);
+	}
+
+	static String formatDate(java.util.Date d) {
+		return d == null ? "" : SHOW.get().format(d);
+	}
+
+	@Override
+	protected void ownTags(HashMap&lt;String, Object&gt; data) throws Exception {
+		String unid = safeUnid(param("unid"));
+		boolean edit = canEdit() &amp;&amp; "1".equals(param("edit"));
+		data.put("edit", edit);
+		data.put("saved", "1".equals(param("saved")));
+		data.put("err", param("err"));
+		// a failed save logged its details: the page links them (req=report&amp;log=)
+		data.put("log", safeUnid(param("log")));
+
+		HashMap&lt;String, Object&gt; page = new HashMap&lt;&gt;();
+		data.put("page", page);
+		if (unid.isEmpty()) {
+			if (!edit) {
+				throw new Exception("Missing parameter: unid");
+			}
+			page.put("isnew", true);
+			return;
+		}
+
+		Document doc = getPage(unid);
+		try {
+			page.put("unid", doc.getUniversalID());
+			DateTime modified = doc.getLastModified();
+			page.put("lastmod", String.valueOf(modified.toJavaDate().getTime()));
+			DominoUtils.recycle(modified);
+
+			// Field1 - text
+			page.put("text", doc.getItemValueString("Field1"));
+
+			// Field2 - date: shown formatted, edited as yyyy-MM-dd
+			java.util.Date date = dateValue(doc, "Field2");
+			page.put("date", formatDate(date));
+			page.put("dateIso", date == null ? "" : ISO.get().format(date));
+
+			// Field3 - number (general format: no trailing .0)
+			page.put("number", numberText(doc, "Field3"));
+
+			// field4 - rich text: formatting, pictures, links, attachments
+			RichText.Body body = rich().read(doc, "field4");
+			page.put("bodyHtml", body.html);
+			page.put("bodyLocked", body.locked);
+			page.put("bodyLockReason", body.reason);
+		} finally {
+			doc.recycle();
+		}
+	}
+
+	/* the first value when it is a date/time, else null (empty, or text) */
+	private static java.util.Date dateValue(Document doc, String item) throws Exception {
+		Vector&lt;?&gt; values = doc.getItemValue(item);
+		java.util.Date out = null;
+		for (Object v : values) {
+			if (out == null &amp;&amp; v instanceof DateTime) {
+				out = ((DateTime) v).toJavaDate();
+			}
+			if (v instanceof DateTime) {
+				DominoUtils.recycle((DateTime) v);
+			}
+		}
+		return out;
+	}
+
+	private static String numberText(Document doc, String item) throws Exception {
+		Vector&lt;?&gt; values = doc.getItemValue(item);
+		return values.isEmpty() ? "" : formatNumber(values.get(0));
+	}
+
+	/* 3.0 -&gt; "3", 2.50 -&gt; "2.5"; "" when empty or not a number (a view
+	 * column hands the same Double as the item) */
+	static String formatNumber(Object value) {
+		if (!(value instanceof Number)) {
+			return "";
+		}
+		return java.math.BigDecimal.valueOf(((Number) value).doubleValue()).stripTrailingZeros().toPlainString();
+	}
+}
+</java><java name='net/prominic/req/ReportPageGet.java'>package net.prominic.req;
+
+import java.util.HashMap;
+
+import lotus.domino.Database;
+import lotus.domino.Document;
+import lotus.domino.Session;
+import net.prominic.log.Logger;
+import net.prominic.web.WebRequest;
+
+/*
+ * GET req=report&amp;unid=&lt;page&gt; - how the page's rich text converts
+ *                              (RichText.report): read-only or not and
+ *                              why, the elements kept whole or unknown,
+ *                              the HTML made and the item's DXL
+ * GET req=report&amp;log=&lt;unid&gt;  - a logged failure with its details
+ *                              (Logger.logDetails, e.g. a failed save)
+ *
+ * The text is meant to be copied and sent to the developer. Editor access
+ * only: both hold the document's content.
+ */
+public class ReportPageGet extends BasePageGet {
+	public ReportPageGet(Session session, Database database, WebRequest web) {
+		super(session, database, web);
+	}
+
+	@Override
+	protected void ownTags(HashMap&lt;String, Object&gt; data) throws Exception {
+		if (!canEdit()) {
+			throw new Exception("You need Editor access to see a report");
+		}
+		HashMap&lt;String, Object&gt; report = new HashMap&lt;&gt;();
+		data.put("report", report);
+
+		String log = safeUnid(param("log"));
+		if (!log.isEmpty()) {
+			Document doc;
+			try {
+				doc = m_database.getDocumentByUNID(log);
+			} catch (Exception e) {
+				throw new Exception("Log entry not found: " + log);
+			}
+			try {
+				if (!"Log".equals(doc.getItemValueString("Form"))) {
+					throw new Exception("Log entry not found: " + log);
+				}
+				report.put("title", doc.getItemValueString("Subject"));
+				report.put("text", Logger.details(doc));
+			} finally {
+				doc.recycle();
+			}
+			return;
+		}
+
+		String unid = safeUnid(param("unid"));
+		Document doc = getPage(unid);
+		try {
+			report.put("unid", unid);
+			report.put("title", "Rich text of " + doc.getItemValueString("Field1"));
+			report.put("text", rich().report(doc, "field4"));
+		} finally {
+			doc.recycle();
+		}
+	}
+}
+</java>
+<sharedlibraryref name='req'/>
+<sharedlibraryref name='mustache'/></javaproject></code>
+<item name='$FlagsExt'><text>D</text></item>
+<item name='$JavaCompilerSource'><text>1.8</text></item>
+<item name='$JavaCompilerTarget'><text>1.8</text></item>
+<item name='$DesignerBuild'><text>Build V1451FP1_06262026</text></item></scriptlibrary>
+

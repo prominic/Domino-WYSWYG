@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?><note xmlns="http://www.lotus.com/dxl" class="form" maintenanceversion="1.0" replicaid="86258E8000474322" version="14.5">
+<noteinfo noteid="2aa" sequence="3" unid="7CD4384F74FC2FB9C1258E140048D3F2">
+<created><datetime dst="true">20260612T151528,50+02</datetime></created>
+<modified><datetime dst="true">20260928T145926,18+02</datetime></modified>
+<revised><datetime dst="true">20260612T151541,50+02</datetime></revised>
+<lastaccessed><datetime dst="true">20260928T145926,17+02</datetime></lastaccessed>
+<addedtofile><datetime dst="true">20260928T145926,17+02</datetime></addedtofile></noteinfo>
+<item name="$TITLE"><text>json-simple-1.1.1.jar</text></item>
+<item name="$Flags"><text>34567Cg~,</text></item>
+<item name="$DesignerVersion"><text>8.5.3</text></item>
+
+
+<item name="$FileNames" sign="true"><text>json-simple-1.1.1.jar</text></item></note>

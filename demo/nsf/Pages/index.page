@@ -1,0 +1,17 @@
+<?xml version='1.0' encoding='utf-8'?>
+<page name='index' xmlns='http://www.lotus.com/dxl' version='14.5' maintenanceversion='1.0'
+ replicaid='86258E8000474322' treatashtml='true' publicaccess='false' designerversion='8.5.3'>
+<noteinfo noteid='1b2' unid='31763CED838CB9DCC1258E14003018FC' sequence='8'>
+<created><datetime dst='true'>20260612T104521,24+02</datetime></created>
+<modified><datetime dst='true'>20260928T145925,70+02</datetime></modified>
+<revised><datetime dst='true'>20260612T151543,98+02</datetime></revised>
+<lastaccessed><datetime dst='true'>20260928T145925,69+02</datetime></lastaccessed>
+<addedtofile><datetime dst='true'>20260928T145925,69+02</datetime></addedtofile></noteinfo>
+<body><richtext>
+<pardef id='1'/>
+<par def='1'>&lt;script&gt;</par>
+<par def='1'>document.location.href="<run><font style='bold'/><computedtext
+><code event='value'><formula>@DbLookup(""; ""; "($configs)"; "Config";"baseURL"; [FailSilent])</formula></code></computedtext></run>/router?openagent&amp;req=home"</par>
+<par def='1'>&lt;/script&gt;</par></richtext></body>
+<item name='$$ScriptName' summary='false' sign='true'><text>index</text></item></page>
+

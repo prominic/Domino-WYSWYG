@@ -1,0 +1,90 @@
+<?xml version='1.0' encoding='utf-8'?>
+<scriptlibrary name='mustache' xmlns='http://www.lotus.com/dxl' version='14.5'
+ maintenanceversion='1.0' replicaid='86258E8000474322' hide='v3 v4strict'
+ designerversion='8.5.3'>
+<noteinfo noteid='25a' unid='F4F6787C76D7B9BBC1258E140048E41F' sequence='5'>
+<created><datetime dst='true'>20260612T151609,91+02</datetime></created>
+<modified><datetime dst='true'>20260928T145926,10+02</datetime></modified>
+<revised><datetime dst='true'>20260612T151641,21+02</datetime></revised>
+<lastaccessed><datetime dst='true'>20260928T145926,09+02</datetime></lastaccessed>
+<addedtofile><datetime dst='true'>20260928T145926,09+02</datetime></addedtofile></noteinfo>
+<code
+ event='library'><javaproject class='JavaAgent.class' codepath='c:\Program Files\HCL\Notes\Data'
+ compiledebug='true'><java name='net/prominic/mustache/MustacheRenderer.java'>package net.prominic.mustache;
+
+import java.io.Reader;
+import java.util.ArrayList;
+import java.util.List;
+
+import com.samskivert.mustache.Mustache;
+import com.samskivert.mustache.Template;
+
+import lotus.domino.Database;
+import lotus.domino.Document;
+import lotus.domino.NotesException;
+import lotus.domino.View;
+import net.prominic.DominoUtils;
+
+/**
+ * 2Renders Mustache templates stored as Template documents in ($templates),
+ * replacing FreeMarker. JMustache is a single dependency-free jar doing pure
+ * string parsing; with a Map-based data model there is no reflection at all.
+ *
+ * Per-request object: holds the request's view and the documents opened for
+ * partials; call recycle() in a finally. Templates are compiled per request
+ * (they are a few KB - parsing cost is negligible), so editing a Template
+ * document is live on the next request.
+ *
+ * Partials: {{&gt; page.head}} resolves through the same ($templates) lookup.
+ */
+public class MustacheRenderer {
+	private View m_view;
+	private final List&lt;Document&gt; m_docs = new ArrayList&lt;Document&gt;();
+	private final Mustache.Compiler m_compiler;
+
+	public MustacheRenderer(Database database) throws NotesException {
+		m_view = database.getView("($templates)");
+		if (m_view == null) {
+			throw new NotesException(0, "View not found: ($templates)");
+		}
+
+		m_compiler = Mustache.compiler()
+				.defaultValue("")        // missing keys render as empty, not an error
+				.emptyStringIsFalse(true) // {{#email}}...{{/email}} skips blank fields
+				.withLoader(new Mustache.TemplateLoader() {
+					public Reader getTemplate(String name) throws Exception {
+						return readerFor(name.trim());
+					}
+				});
+	}
+
+	public String render(String id, Object data) throws Exception {
+		Template template = m_compiler.compile(readerFor(id));
+		return template.execute(data);
+	}
+
+	private Reader readerFor(String id) throws Exception {
+		Document doc = m_view.getDocumentByKey(id, true);
+		if (doc == null) {
+			throw new Exception("Template not found: " + id);
+		}
+		m_docs.add(doc); // recycled in recycle(), after compile has consumed the reader
+		return doc.getFirstItem("Body").getReader();
+	}
+
+	public void recycle() {
+		for (Document doc : m_docs) {
+			DominoUtils.recycle(doc);
+		}
+		m_docs.clear();
+		DominoUtils.recycle(m_view);
+		m_view = null;
+	}
+}
+</java>
+<sharedlibraryref name='utils'/></javaproject></code>
+<item name='$FlagsExt'><text>D</text></item>
+<item name='$JavaCompilerSource'><text>1.8</text></item>
+<item name='$JavaCompilerTarget'><text>1.8</text></item>
+<item name='$DesignerBuild'><text>Build V1451_03042026</text></item></scriptlibrary>
+

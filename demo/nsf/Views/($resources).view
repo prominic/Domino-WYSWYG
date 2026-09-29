@@ -1,0 +1,25 @@
+<?xml version='1.0' encoding='utf-8'?>
+<view name='($resources)' alias='resources' xmlns='http://www.lotus.com/dxl'
+ version='14.5' maintenanceversion='1.0' replicaid='86258E8000474322' showinmenu='false'
+ publicaccess='false' designerversion='8.5.3' unreadmarks='none' onopengoto='lastopened'
+ onrefresh='displayindicator' headers='beveled' opencollapsed='false' showresponsehierarchy='true'
+ showmargin='true' shrinkrows='false' extendlastcolumn='true' showhierarchies='false'
+ unreadcolor='black' rowlinecount='1' headerlinecount='1' rowspacing='1' bgcolor='white'
+ totalscolor='black' headerbgcolor='white' boldunreadrows='false' evaluateactions='false'
+ allownewdocuments='false' allowcustomizations='true' hidemarginborder='false'
+ marginwidth='0px' marginbgcolor='white' uniquekeys='false'>
+<noteinfo noteid='1c6' unid='BBFF844204FE9A96C1258E140030190B' sequence='8'>
+<created><datetime dst='true'>20260612T104521,39+02</datetime></created>
+<modified><datetime dst='true'>20260928T145925,76+02</datetime></modified>
+<revised><datetime dst='true'>20260612T151544,16+02</datetime></revised>
+<lastaccessed><datetime dst='true'>20260928T145925,75+02</datetime></lastaccessed>
+<addedtofile><datetime dst='true'>20260928T145925,75+02</datetime></addedtofile></noteinfo>
+<code
+ event='selection'><formula>SELECT Form="Resource"</formula></code>
+<column sort='ascending' hidedetailrows='false' itemname='Name' width='36'
+ resizable='true' separatemultiplevalues='false' sortnoaccent='false' sortnocase='true'
+ showaslinks='false'><columnheader title='Name'><font size='9pt'/></columnheader></column>
+<item name='$DesignerBuild'><text>Build V1451_03042026</text></item>
+<item name='$DesignerBuild'><text>Build V1451_03042026</text></item>
+<item name='$DesignerBuild'><text>Build V1451_03042026</text></item></view>
+

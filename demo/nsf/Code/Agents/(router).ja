@@ -1,0 +1,191 @@
+<?xml version='1.0' encoding='utf-8'?>
+<agent name='(router)' xmlns='http://www.lotus.com/dxl' version='14.5' maintenanceversion='1.0'
+ replicaid='86258E8000474322' hide='v3' runaswebuser='true' publicaccess='false'
+ designerversion='8.5.3' restrictions='unrestricted'>
+<noteinfo noteid='27e' unid='2D991EF4AF3A0DA3C1258E14003015D4' sequence='25'>
+<created><datetime dst='true'>20260612T104513,16+02</datetime></created>
+<modified><datetime dst='true'>20260929T111001,41+02</datetime></modified>
+<revised><datetime dst='true'>20260929T111001,40+02</datetime></revised>
+<lastaccessed><datetime dst='true'>20260929T111001,40+02</datetime></lastaccessed>
+<addedtofile><datetime dst='true'>20260928T145926,12+02</datetime></addedtofile></noteinfo>
+<designchange><datetime dst='true'>20260929T111001,38+02</datetime></designchange>
+<trigger type='agentlist'/>
+<documentset type='all'/><code event='action'><javaproject class='JavaAgent.class'
+ codepath='c:\Program Files\HCL\Notes\Data' compiledebug='true'><java name='JavaAgent.java'>import java.io.PrintWriter;
+
+import lotus.domino.AgentBase;
+import lotus.domino.AgentContext;
+import lotus.domino.Database;
+import lotus.domino.Document;
+import lotus.domino.Session;
+import lotus.domino.View;
+import net.prominic.DominoUtils;
+import net.prominic.log.Logger;
+import net.prominic.req.*;
+import net.prominic.web.WebRequest;
+
+/*
+ * The one web entry point: router?openagent&amp;req=&lt;route&gt;. Runs as the WEB
+ * USER, so everything a handler reads or writes goes through the browser
+ * user's own ACL level - Domino does the access control.
+ *
+ *   GET  home       the Page documents
+ *   GET  page       one Page (&amp;unid=), editable with &amp;edit=1
+ *   GET  report     how a page's rich text converts (&amp;unid=), or a logged
+ *                   failure (&amp;log=) - text to send the developer; Editors only
+ *   POST page.save  save it (text, date, number, rich text)
+ */
+public class JavaAgent extends AgentBase {
+	PrintWriter m_pw;
+	private Session m_session;
+	private Database m_database;
+	private WebRequest m_web;
+	private String m_baseURL;
+
+	@Override
+	public void NotesMain() {
+		AgentContext agentContext = null;
+		View view = null;
+		Document config = null;
+		Document dc = null;
+
+		try {
+			m_session = getSession();
+			m_database = m_session.getCurrentDatabase();
+			agentContext = m_session.getAgentContext();
+			m_pw = getAgentOutput();
+
+			view = m_database.getView("($configs)");
+			config = view.getFirstDocument();
+
+			if (config == null) {
+				throw new Exception("Configuration document not found in ($configs) view");
+			}
+
+			m_baseURL = config.getItemValueString("BaseURL");
+
+			dc = agentContext.getDocumentContext();
+			m_web = new WebRequest(dc);
+
+			String req = m_web.getParam("req");
+			if (req == null || req.isEmpty()) {
+				req = "home";
+			}
+
+			String method = m_web.getDC().getItemValueString("Request_Method");
+			BaseAbstract base = getReq(req, method);
+			base.setConfig(config);
+
+			// calc result
+			base.run();
+
+			printResult(base);
+		} catch (Exception e) {
+			printErrorHTML(500, "Internal Server Error", e.getMessage());
+			Logger.logSevere(m_database, e);
+		} finally {
+			// Recycle in reverse order of creation: documents, then view, then agentContext
+			DominoUtils.recycle(dc, config, view, agentContext);
+			// Note: Don't recycle m_database and m_session as they're managed by AgentBase
+		}
+	}
+
+	private BaseAbstract getReq(String req, String method) throws Exception {
+		BaseAbstract base = null;
+
+		if ("GET".equalsIgnoreCase(method)) {
+			if ("home".equalsIgnoreCase(req)) {
+				base = new HomePageGet(m_session, m_database, m_web);
+			} else if ("page".equalsIgnoreCase(req)) {
+				base = new PagePageGet(m_session, m_database, m_web);
+			} else if ("report".equalsIgnoreCase(req)) {
+				base = new ReportPageGet(m_session, m_database, m_web);
+			}
+		} else if ("POST".equalsIgnoreCase(method)) {
+			if ("page.save".equals(req)) {
+				base = new PageSavePost(m_session, m_database, m_web);
+			}
+		}
+
+		if (base == null) {
+			throw new Exception("Router not initialized for: " + method + " " + req);
+		}
+
+		return base;
+	}
+
+	private void printResult(BaseAbstract base) {
+		if (base.getContentType() != null) {
+			m_pw.println("Content-Type: " + base.getContentType());
+		}
+		if (base.getStatus() &gt; 0) {
+			m_pw.println("Status: " + base.getStatus());
+		}
+		if (base.getLocation() != null) {
+			m_pw.println("Location: " + base.getLocation());
+		}
+		if (base.getCookie() != null) {
+			m_pw.println("Set-Cookie: " + base.getCookie());
+		}
+		if (base.getContent() != null) {
+			m_pw.println(base.getContent());
+		}
+	}
+
+	private void printErrorHTML(int code, String statusText, String message) {
+		String alertClass = "";
+		String headerText = "";
+		String description = "";
+		switch (code) {
+		case 401:
+			alertClass = "alert-warning";
+			headerText = "Access Denied";
+			description = "You don't have permission to access this resource. Please sign in with appropriate credentials.";
+			break;
+		case 404:
+			alertClass = "alert-info";
+			headerText = "Page Not Found";
+			description = "The page you're looking for doesn't exist.";
+			break;
+		case 500:
+		default:
+			alertClass = "alert-danger";
+			headerText = "Server Error";
+			description = "An unexpected error occurred. Please try again later.";
+			break;
+		}
+		String homeUrl = m_baseURL != null ? m_baseURL + "/router?openagent&amp;req=home" : "#";
+		String html = "&lt;!DOCTYPE html&gt;" + "&lt;html lang=\"en\"&gt;" + "&lt;head&gt;" + "&lt;meta charset=\"UTF-8\"&gt;"
+				+ "&lt;meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"&gt;" + "&lt;title&gt;Error " + code
+				+ " - " + statusText + "&lt;/title&gt;"
+				+ "&lt;link href=\"https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css\" rel=\"stylesheet\"&gt;"
+				+ "&lt;link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css\"&gt;"
+				+ "&lt;/head&gt;" + "&lt;body class=\"bg-light d-flex align-items-center min-vh-100\"&gt;"
+				+ "&lt;div class=\"container\"&gt;" + "&lt;div class=\"row justify-content-center\"&gt;"
+				+ "&lt;div class=\"col-md-8 col-lg-6\"&gt;" + "&lt;div class=\"alert " + alertClass
+				+ " shadow-sm\" role=\"alert\"&gt;" + "&lt;h4 class=\"alert-heading text-center mb-3\"&gt;" + headerText
+				+ "&lt;/h4&gt;" + "&lt;hr&gt;" + "&lt;p class=\"mb-3\"&gt;" + description + "&lt;/p&gt;";
+		if (message != null &amp;&amp; !message.isEmpty()) {
+			html += "&lt;div class=\"bg-light rounded p-3 mb-3\"&gt;"
+					+ "&lt;h6 class=\"mb-2\"&gt;&lt;i class=\"bi bi-info-circle me-1\"&gt;&lt;/i&gt; Details:&lt;/h6&gt;"
+					+ "&lt;p class=\"mb-0 text-muted\"&gt;" + DominoUtils.escapeHtml(message) + "&lt;/p&gt;" + "&lt;/div&gt;";
+		}
+		html += "&lt;div class=\"d-flex justify-content-between align-items-center mb-3\"&gt;"
+				+ "&lt;span class=\"text-muted small\"&gt;Error Code: " + code + "&lt;/span&gt;"
+				+ "&lt;span class=\"text-muted small\"&gt;" + new java.util.Date() + "&lt;/span&gt;" + "&lt;/div&gt;";
+		html += "&lt;/div&gt;" + "&lt;div class=\"text-center mt-4\"&gt;" + "&lt;a href=\"" + homeUrl + "\" class=\"btn btn-primary\"&gt;"
+				+ "&lt;i class=\"bi bi-house me-2\"&gt;&lt;/i&gt;Return to Home" + "&lt;/a&gt;" + "&lt;/div&gt;" + "&lt;/div&gt;" + "&lt;/div&gt;"
+				+ "&lt;/div&gt;" + "&lt;/body&gt;" + "&lt;/html&gt;";
+		m_pw.println("Content-Type: text/html; charset=UTF-8");
+		m_pw.println("Status: " + code + " " + statusText);
+		m_pw.println(html);
+	}
+
+}</java>
+<sharedlibraryref name='req.post'/>
+<sharedlibraryref name='utils'/>
+<sharedlibraryref name='req.get'/></javaproject></code>
+<item name='$JavaCompilerSource'><text>1.8</text></item>
+<item name='$JavaCompilerTarget'><text>1.8</text></item>
+<item name='$DesignerBuild'><text>Build V1451FP1_06262026</text></item></agent>
+

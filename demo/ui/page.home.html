@@ -1,0 +1,39 @@
+<div class="container">
+  <div class="d-flex justify-content-between align-items-center mt-3 mb-3">
+    <h1 class="h4 mb-0"><i class="bi bi-files me-2"></i>Pages</h1>
+    {{#canEdit}}
+    <a href="{{&config.baseurl}}/router?openagent&req=page&edit=1" class="btn btn-primary btn-sm">
+      <i class="bi bi-plus-lg me-1"></i>New page
+    </a>
+    {{/canEdit}}
+  </div>
+
+  {{! the ($pages) view: one row per Page, sorted by its text }}
+  {{#haspages}}
+  <div class="table-responsive shadow-sm rounded border">
+    <table class="table table-hover table-sm align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th scope="col">Text <span class="text-body-secondary fw-normal small">Field1</span></th>
+          <th scope="col">Date <span class="text-body-secondary fw-normal small">Field2</span></th>
+          <th scope="col" class="text-end">Number <span class="text-body-secondary fw-normal small">Field3</span></th>
+          <th scope="col">Created</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#pages}}
+        <tr>
+          <td><a href="{{&config.baseurl}}/router?openagent&req=page&unid={{unid}}" class="text-decoration-none"><i class="bi bi-file-richtext me-2"></i>{{text}}</a></td>
+          <td>{{date}}</td>
+          <td class="text-end">{{number}}</td>
+          <td class="text-body-secondary small">{{created}}</td>
+        </tr>
+        {{/pages}}
+      </tbody>
+    </table>
+  </div>
+  {{/haspages}}
+  {{^haspages}}
+  <p class="text-body-secondary">No Page documents yet.</p>
+  {{/haspages}}
+</div>

@@ -1,0 +1,38 @@
+<?xml version='1.0' encoding='utf-8'?>
+<form name='Template' xmlns='http://www.lotus.com/dxl' version='14.5' maintenanceversion='1.0'
+ replicaid='86258E8000474322' hide='web' nocompose='true' noquery='true' treatashtml='true'
+ publicaccess='false' designerversion='8.5.3' renderpassthrough='true'>
+<noteinfo noteid='20e' unid='8B3FD665C7801E1CC1258E14003018F9' sequence='9'>
+<created><datetime dst='true'>20260612T104521,21+02</datetime></created>
+<modified><datetime dst='true'>20260928T145925,96+02</datetime></modified>
+<revised><datetime dst='true'>20260612T153853,96+02</datetime></revised>
+<lastaccessed><datetime dst='true'>20260928T145925,95+02</datetime></lastaccessed>
+<addedtofile><datetime dst='true'>20260928T145925,95+02</datetime></addedtofile></noteinfo>
+<code
+ event='windowtitle'><formula>ID</formula></code>
+<actionbar bgcolor='#f0f0f0' bordercolor='black'>
+<actionbuttonstyle bgcolor='#f0f0f0'/><font color='system'/><border style='solid'
+ width='0px 0px 1px' color='system'/></actionbar>
+<body><richtext>
+<pardef id='1' hide='notes web mobile'/><subformref name='form.action'/>
+<pardef id='2'/>
+<par def='2'/>
+<pardef id='3' leftmargin='1in' tabs='L0.5000in L1in L1.5000in L2in L2.5000in L3in L3.5000in L4in'/>
+<par def='3'><run><font size='16pt' style='bold'/>Template</run></par>
+<par def='2'/>
+<par def='2'>ID: <field type='text' kind='editable' name='ID'/><compositedata
+ type='98' prevtype='65418' nexttype='222' afterparcount='6' containertype='65418'
+ aftercontainercount='1' afterbegincount='3'>
+Yg4BAIQAAAAAAAAAAAA=
+</compositedata></par>
+<par def='2'/>
+<par def='2'>Body:</par>
+<par def='2'><field type='richtext' kind='editable' name='Body'/><compositedata
+ type='98' prevtype='65418' nexttype='222' afterparcount='6' containertype='65418'
+ aftercontainercount='1' afterbegincount='3'>
+Yg4BAIQAAAAAAAAAAAA=
+</compositedata></par></richtext></body>
+<item name='$SubForm_RepIDs' sign='true'><text>0000000000000000</text></item>
+<item name='$DesignerBuild'><text>Build V1451_03042026</text></item>
+<item name='$$ScriptName' summary='false' sign='true'><text>HTML</text></item></form>
+

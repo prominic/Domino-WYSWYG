@@ -1,0 +1,185 @@
+<?xml version='1.0' encoding='utf-8'?>
+<scriptlibrary name='web.request' xmlns='http://www.lotus.com/dxl' version='14.5'
+ maintenanceversion='1.0' replicaid='86258E8000474322' hide='v3 v4strict'
+ designerversion='8.5.3'>
+<noteinfo noteid='26e' unid='33165A6A2E59125EC1258E1400301877' sequence='10'>
+<created><datetime dst='true'>20260612T104519,91+02</datetime></created>
+<modified><datetime dst='true'>20260928T145926,12+02</datetime></modified>
+<revised><datetime dst='true'>20260612T151543,67+02</datetime></revised>
+<lastaccessed><datetime dst='true'>20260928T145926,11+02</datetime></lastaccessed>
+<addedtofile><datetime dst='true'>20260928T145926,11+02</datetime></addedtofile></noteinfo>
+<code
+ event='library'><javaproject class='JavaAgent.class' codepath='c:\Program Files\HCL\Notes\Data'
+ compiledebug='true'><java name='net/prominic/web/WebRequest.java'>package net.prominic.web;
+
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import lotus.domino.Document;
+import lotus.domino.NotesException;
+
+public class WebRequest {
+	private Document m_dc;
+	private HashMap&lt;String, String&gt; m_params = null;
+	private HashMap&lt;String, String&gt; m_cookies = null;
+	private String m_requestContent = null;
+	private String m_contentType = null;
+
+	public WebRequest(Document dc) {
+		m_dc = dc;
+	}
+
+	private String decodeValue(String value) {
+		try {
+			return URLDecoder.decode(value, StandardCharsets.UTF_8.name());
+		} catch (UnsupportedEncodingException ex) {
+			// UTF-8 is required by every JVM, so this is unreachable.
+			throw new RuntimeException(ex);
+		}
+	}
+
+	public Document getDC() {
+		return m_dc;
+	}
+
+	/**
+	 * Get the content type of the request
+	 */
+	public String getContentType() throws NotesException {
+		if (m_contentType == null) {
+			m_contentType = m_dc.getItemValueString("CONTENT_TYPE");
+		}
+		return m_contentType;
+	}
+
+	/**
+	 * Check if content type contains a specific string
+	 */
+	public boolean isContentType(String type) throws NotesException {
+		String ct = getContentType().toLowerCase();
+		return ct.contains(type.toLowerCase());
+	}
+
+	/**
+	 * Check if this is a form-urlencoded request
+	 */
+	public boolean isFormUrlEncoded() throws NotesException {
+		return isContentType("application/x-www-form-urlencoded");
+	}
+
+	/**
+	 * Check if this is a JSON request
+	 */
+	public boolean isJson() throws NotesException {
+		return isContentType("application/json");
+	}
+
+	/**
+	 * Check if this is an XML request
+	 */
+	public boolean isXml() throws NotesException {
+		String ct = getContentType().toLowerCase();
+		return ct.contains("application/xml") || ct.contains("text/xml");
+	}
+
+	public boolean hasParam(String key) throws NotesException {
+		return getParams().containsKey(key);
+	}
+
+	public String getParam(String key) throws NotesException {
+		return getParams().get(key);
+	}
+
+	private HashMap&lt;String, String&gt; getParams() throws NotesException {
+		if (m_params != null) return m_params;
+
+		m_params = new HashMap&lt;&gt;();
+
+		String queryString = m_dc.getItemValueString("Query_String");
+		if (!queryString.isEmpty()) {
+			parseUrlEncodedString(queryString, m_params);
+		}
+
+		// Only parse Request_Content if it's form-urlencoded
+		if (isFormUrlEncoded()) {
+			String requestContent = getRequestContent();
+			if (!requestContent.isEmpty()) {
+				parseUrlEncodedString(requestContent, m_params);
+			}
+		}
+
+		return m_params;
+	}
+
+	private void parseUrlEncodedString(String input, HashMap&lt;String, String&gt; target) {
+		for (String pair : input.split("&amp;")) {
+			if (!pair.contains("=")) continue;
+			String[] kv = pair.split("=", 2);
+			target.put(kv[0], kv.length &gt; 1 ? decodeValue(kv[1]) : "");
+		}
+	}
+
+	public String getCookie() {
+		try {
+			return m_dc.getItemValueString("HTTP_COOKIE");
+		} catch (NotesException e) {
+			return "";
+		}
+	}
+
+	public String getCookie(String name) {
+		if (m_cookies == null) {
+			m_cookies = new HashMap&lt;&gt;();
+			String cookies = getCookie();
+			if (cookies.isEmpty()) return null;
+			for (String pair : cookies.split("; ")) {
+				if (!pair.contains("=")) continue;
+				String[] kv = pair.split("=", 2);
+				m_cookies.put(kv[0], kv.length &gt; 1 ? decodeValue(kv[1]) : "");
+			}
+		}
+		return m_cookies.get(name);
+	}
+
+	/**
+	 * Get raw request content as string
+	 * This returns the raw content regardless of content type
+	 */
+	public String getRequestContent() throws NotesException {
+		if (m_requestContent != null) {
+			return m_requestContent;
+		}
+
+		String res = "";
+
+		// if less than 64KB
+		if (m_dc.hasItem("Request_Content")) {
+			res = m_dc.getItemValueString("Request_Content");
+			m_requestContent = res;
+			return res;
+		}
+
+		// if more than 64KB (means Request_Content_000, Request_Content_001 etc)
+		if (m_dc.hasItem("Request_Content_000")) {
+			StringBuilder sb = new StringBuilder();
+			for (int i = 0; i &lt; 100; i++) {
+				String fieldName = "Request_Content_" + String.format("%03d", i);
+				if (m_dc.hasItem(fieldName)) {
+					sb.append(m_dc.getItemValueString(fieldName));
+				} else {
+					break; // Stop when we run out of fields
+				}
+			}
+			res = sb.toString();
+		}
+
+		m_requestContent = res;
+		return res;
+	}
+}</java></javaproject></code>
+<item name='$FlagsExt'><text>D</text></item>
+<item name='$JavaCompilerSource'><text>1.8</text></item>
+<item name='$JavaCompilerTarget'><text>1.8</text></item>
+<item name='$DesignerBuild'><text>Build V1451_03042026</text></item></scriptlibrary>
+

@@ -1,0 +1,99 @@
+<?xml version='1.0' encoding='utf-8'?>
+<agent name='9. Admin\1. Export UI' xmlns='http://www.lotus.com/dxl' version='14.5'
+ maintenanceversion='1.0' replicaid='86258E8000474322' hide='v3' publicaccess='false'
+ designerversion='8.5.3'>
+<noteinfo noteid='286' unid='6396DF179526F491C1258E14003016E7' sequence='22'>
+<created><datetime dst='true'>20260612T104515,91+02</datetime></created>
+<modified><datetime dst='true'>20260929T113834,93+02</datetime></modified>
+<revised><datetime dst='true'>20260929T113834,92+02</datetime></revised>
+<lastaccessed><datetime dst='true'>20260929T113834,92+02</datetime></lastaccessed>
+<addedtofile><datetime dst='true'>20260928T145926,13+02</datetime></addedtofile></noteinfo>
+<designchange><datetime dst='true'>20260929T113834,89+02</datetime></designchange>
+<trigger type='actionsmenu'/>
+<documentset type='runonce'/><code event='options'><lotusscript>Option Public
+Option Declare
+
+
+</lotusscript></code><code event='initialize'><lotusscript>Sub Initialize
+	On Error Goto errh
+	
+	Dim session As New NotesSession
+	Dim db As NotesDatabase
+	Dim collection As NotesDocumentCollection
+	Dim doc As NotesDocument
+	Dim body As NotesItem
+	Dim rtBody As NotesRichTextItem
+	Dim exportPath As String
+	Dim fileName As String
+	Dim content As String
+	Dim count As Integer
+	
+	Set db = session.CurrentDatabase
+	
+	' the UI folder: notes.ini DominoWysiwygUI, else this repository's
+	exportPath = session.GetEnvironmentString("DominoWysiwygUI", False)
+	If exportPath = "" Then exportPath = "C:\Domino-WYSIWYG\demo\ui"
+	
+	If exportPath = "" Then
+		Print "Export cancelled"
+		Exit Sub
+	End If
+	
+	' Ensure path ends with backslash
+	If Right(exportPath, 1) &lt;&gt; "\" Then
+		exportPath = exportPath &amp; "\"
+	End If
+	
+	Print "Exporting files..."
+	Set collection = db.Search({Form = "JS":"CSS":"Template"}, Nothing, 0)
+	Set doc = collection.GetFirstDocument
+	While Not doc Is Nothing
+		fileName = doc.GetItemValue("Name")(0)
+		If Len(fileName) = 0 Then
+			fileName = doc.GetItemValue("ID")(0) &amp; ".html"
+		End If
+		
+		Set body = doc.Getfirstitem("Body")
+		If body.Type = 1 Then
+			Set rtBody = body
+			content = rtbody.Getunformattedtext()
+		Else
+			content = body.text
+		End If
+
+		If ExportFile(exportPath &amp; fileName, content) Then
+			count = count + 1
+		End If
+		Set doc = collection.GetNextDocument(doc)
+	Wend
+	
+	' Done
+	Messagebox "Export completed!" &amp; Chr(13) &amp; Chr(10) &amp; "Files exported: " &amp; Cstr(count) &amp; Chr(13) &amp; Chr(10) &amp; "Location: " &amp; exportPath, 64, "Export Successful"
+	
+final:
+	Exit Sub
+errh:
+	Messagebox "Error: " &amp; Error$, 16, "Export Error"
+	Resume final
+End Sub
+
+</lotusscript></code><code event='ExportFile'><lotusscript>Function ExportFile(filePath As String, body As String) As Boolean
+	On Error Goto FunctionError
+	
+	Dim fileNum As Integer
+	
+	fileNum = Freefile()
+	Open filePath For Output As fileNum
+	Print #fileNum, body
+	Close fileNum
+	
+	Print "Exported: " &amp; filePath
+	ExportFile = True
+	Exit Function
+	
+FunctionError:
+	Print "Error exporting file: " &amp; filePath &amp; " - " &amp; Error$
+	ExportFile = False
+End Function</lotusscript></code>
+<item name='$DesignerBuild'><text>Build V1451FP1_06262026</text></item></agent>
+

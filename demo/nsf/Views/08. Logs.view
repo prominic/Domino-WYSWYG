@@ -1,0 +1,54 @@
+<?xml version='1.0' encoding='utf-8'?>
+<view name='08. Logs' xmlns='http://www.lotus.com/dxl' version='14.5' maintenanceversion='1.0'
+ replicaid='86258E8000474322' hide='web' showinmenu='false' publicaccess='false'
+ designerversion='8.5.3' unreadmarks='none' onopengoto='lastopened' onrefresh='displayindicator'
+ headers='beveled' opencollapsed='false' showresponsehierarchy='true' showmargin='true'
+ shrinkrows='false' extendlastcolumn='true' showhierarchies='false' unreadcolor='black'
+ rowlinecount='1' headerlinecount='1' rowspacing='1' bgcolor='white' totalscolor='black'
+ headerbgcolor='white' boldunreadrows='false' evaluateactions='false' allownewdocuments='false'
+ allowcustomizations='false' hidemarginborder='false' marginwidth='0px' marginbgcolor='white'
+ uniquekeys='false'>
+<noteinfo noteid='22e' unid='D06001E5E4F2B835C1258E140030192C' sequence='10'>
+<created><datetime dst='true'>20260612T104521,72+02</datetime></created>
+<modified><datetime dst='true'>20260928T150211,18+02</datetime></modified>
+<revised><datetime dst='true'>20260928T150211,17+02</datetime></revised>
+<lastaccessed><datetime dst='true'>20260928T150211,17+02</datetime></lastaccessed>
+<addedtofile><datetime dst='true'>20260928T145926,04+02</datetime></addedtofile></noteinfo>
+<code
+ event='selection'><formula>SELECT Form = "Log"</formula></code>
+<actionbar bgcolor='#f0f0f0' bordercolor='black'>
+<actionbuttonstyle bgcolor='#f0f0f0'/><font size='9pt' color='system'/><border
+ style='solid' width='0px 0px 1px'/>
+<sharedactionref id='6'>
+<action title='Open Parent DB' icon='24'><code event='click'><lotusscript
+>Sub Click(Source As Button)
+	'workspace
+	Dim workspace As New NotesUIWorkspace
+	
+	'view	
+	Dim uiview As NotesUIView
+	Set uiview = workspace.CurrentView
+	Dim view As NotesView
+	Set view = uiview.View
+	
+	'database
+	Dim db As NotesDatabase
+	Set db = view.Parent
+	
+	Call workspace.OpenDatabase( db.Server, db.FilePath, view.Name, , True, True)
+End Sub
+</lotusscript></code></action></sharedactionref></actionbar>
+<column sort='descending' hidedetailrows='false' itemname='$1' width='16'
+ resizable='false' separatemultiplevalues='false' sortnoaccent='false' sortnocase='true'
+ showaslinks='false'><columnheader title='Created'><font size='9pt'/></columnheader><code
+ event='value'><formula>@Created</formula></code></column>
+<column hidedetailrows='false' itemname='$5' width='4' resizable='false' separatemultiplevalues='false'
+ sortnoaccent='false' sortnocase='true' showaslinks='false' showasicons='true'><columnheader
+><font size='9pt' style='bold'/></columnheader><code event='value'><formula
+>@If(Level=0; 32; Level=1; 114; Level=2; 120; Level=3; 115; 0)</formula></code></column>
+<column hidedetailrows='false' itemname='$6' width='39.6250' resizable='true'
+ separatemultiplevalues='false' sortnoaccent='false' sortnocase='true' showaslinks='false'><columnheader
+ title='Subject'><font size='9pt'/></columnheader><code event='value'><formula
+>@If(@Length(Subject) &gt; 150; @Left(Subject; 150) + "..."; Subject)</formula></code></column>
+<item name='$DesignerBuild' sign='true'><text>Build V1451FP1_06262026</text></item></view>
+

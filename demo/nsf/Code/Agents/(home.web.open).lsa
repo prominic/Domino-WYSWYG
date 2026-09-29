@@ -1,0 +1,44 @@
+<?xml version='1.0' encoding='utf-8'?>
+<agent name='(home.web.open)' xmlns='http://www.lotus.com/dxl' version='14.5'
+ maintenanceversion='1.0' replicaid='86258E8000474322' hide='v3' publicaccess='false'
+ designerversion='8.5.3'>
+<noteinfo noteid='262' unid='AE8A9E61580AFEA1C1258E14003015C4' sequence='8'>
+<created><datetime dst='true'>20260612T104513,00+02</datetime></created>
+<modified><datetime dst='true'>20260928T145926,11+02</datetime></modified>
+<revised><datetime dst='true'>20260612T151540,64+02</datetime></revised>
+<lastaccessed><datetime dst='true'>20260928T145926,10+02</datetime></lastaccessed>
+<addedtofile><datetime dst='true'>20260928T145926,10+02</datetime></addedtofile></noteinfo>
+<designchange><datetime dst='true'>20260612T151540,61+02</datetime></designchange>
+<trigger type='agentlist'/>
+<documentset type='runonce'/><code event='options'><lotusscript>Option Public
+Option Declare
+
+
+</lotusscript></code><code event='initialize'><lotusscript>Sub Initialize
+	On Error Goto Errh
+	
+	Dim ws As NotesUIWorkspace
+	Dim session As NotesSession
+	Dim database As NotesDatabase
+	Dim config As NotesDocument
+	Dim baseurl As String
+	Dim url As String
+	
+	Set session = New NotesSession
+	Set database = session.Currentdatabase
+	
+	Set config = database.getview("($configs)").getfirstdocument
+	If config Is Nothing Then Exit Sub
+	baseurl = config.Getitemvalue("BaseURL")(0)
+	
+	Set ws = New notesuiworkspace
+	url = baseurl &amp; "/router?openagent&amp;req=home"
+	Call ws.Urlopen(url)
+	
+	Exit Sub
+errh:
+	Msgbox Error$ &amp; " at line: " &amp; Cstr(Erl)
+	Exit Sub
+End Sub</lotusscript></code>
+</agent>
+

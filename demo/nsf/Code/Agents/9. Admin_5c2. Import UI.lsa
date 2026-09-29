@@ -1,0 +1,158 @@
+<?xml version='1.0' encoding='utf-8'?>
+<agent name='9. Admin\2. Import UI' xmlns='http://www.lotus.com/dxl' version='14.5'
+ maintenanceversion='1.0' replicaid='86258E8000474322' hide='v3' publicaccess='false'
+ designerversion='8.5.3'>
+<noteinfo noteid='29a' unid='8C75EFF4994708A5C1258E14003016EF' sequence='22'>
+<created><datetime dst='true'>20260612T104515,99+02</datetime></created>
+<modified><datetime dst='true'>20260929T113834,99+02</datetime></modified>
+<revised><datetime dst='true'>20260929T113834,98+02</datetime></revised>
+<lastaccessed><datetime dst='true'>20260929T113834,98+02</datetime></lastaccessed>
+<addedtofile><datetime dst='true'>20260928T145926,15+02</datetime></addedtofile></noteinfo>
+<designchange><datetime dst='true'>20260929T113834,95+02</datetime></designchange>
+<trigger type='actionsmenu'/>
+<documentset type='runonce'/><code event='options'><lotusscript>Option Public
+Option Declare
+
+
+</lotusscript></code><code event='initialize'><lotusscript>Sub Initialize
+	On Error Goto errh
+
+	Dim session As New NotesSession
+	Dim db As NotesDatabase
+	Dim importPath As String
+	Dim fileName As String
+	Dim count As Integer
+
+	Set db = session.CurrentDatabase
+
+	' the UI folder: notes.ini DominoWysiwygUI, else this repository's
+	importPath = session.GetEnvironmentString("DominoWysiwygUI", False)
+	If importPath = "" Then importPath = "C:\Domino-WYSIWYG\demo\ui"
+
+	If importPath = "" Then
+		Print "Import cancelled"
+		Exit Sub
+	End If
+
+	' Ensure path ends with backslash
+	If Right(importPath, 1) &lt;&gt; "\" Then
+		importPath = importPath &amp; "\"
+	End If
+
+	Print "Importing files..."
+	fileName = Dir$(importPath &amp; "*.*", 0)
+	While fileName &lt;&gt; ""
+		If ImportFile(db, importPath, fileName) Then
+			count = count + 1
+		End If
+		fileName = Dir$()
+	Wend
+
+	' Done
+	Messagebox "Import completed!" &amp; Chr(13) &amp; Chr(10) &amp; "Files imported: " &amp; Cstr(count) &amp; Chr(13) &amp; Chr(10) &amp; "Location: " &amp; importPath, 64, "Import Successful"
+
+final:
+	Exit Sub
+errh:
+	Messagebox "Error: " &amp; Error$, 16, "Import Error"
+	Resume final
+End Sub
+
+</lotusscript></code><code event='ImportFile'><lotusscript>Function ImportFile(db As NotesDatabase, dirPath As String, fileName As String) As Boolean
+	On Error Goto FunctionError
+
+	Dim view As NotesView
+	Dim doc As NotesDocument
+	Dim rtBody As NotesRichTextItem
+	Dim content As String
+	Dim key As String
+	Dim formName As String
+	Dim keyField As String
+
+	' Decide target form by extension (mirrors the export agent naming:
+	' Template docs export as ID + ".html", CSS/JS docs export as Name)
+	If Lcase(Right(fileName, 5)) = ".html" Then
+		formName = "Template"
+		keyField = "ID"
+		key = Left(fileName, Len(fileName) - 5)
+		Set view = db.GetView("($templates)")
+	Elseif Lcase(Right(fileName, 4)) = ".css" Then
+		formName = "CSS"
+		keyField = "Name"
+		key = fileName
+		Set view = db.GetView("($css)")
+	Elseif Lcase(Right(fileName, 3)) = ".js" Then
+		formName = "JS"
+		keyField = "Name"
+		key = fileName
+		Set view = db.GetView("($js)")
+	Else
+		Print "Skipped (unknown type): " &amp; fileName
+		ImportFile = False
+		Exit Function
+	End If
+
+	content = ReadFile(dirPath &amp; fileName)
+
+	Call view.Refresh()
+	Set doc = view.GetDocumentByKey(key, True)
+	If doc Is Nothing Then
+		Set doc = db.CreateDocument()
+		Call doc.ReplaceItemValue("Form", formName)
+		Call doc.ReplaceItemValue(keyField, key)
+	End If
+
+	' Body: rich text for templates (matches the Template form and has no
+	' 64KB limit), plain text item for CSS/JS (matches their web forms)
+	If doc.HasItem("Body") Then
+		Call doc.RemoveItem("Body")
+	End If
+	If formName = "Template" Then
+		Set rtBody = New NotesRichTextItem(doc, "Body")
+		Call rtBody.AppendText(content)
+	Else
+		Call doc.ReplaceItemValue("Body", content)
+	End If
+
+	Call doc.Save(True, False)
+
+	Print "Imported: " &amp; fileName &amp; " -&gt; " &amp; formName &amp; " (" &amp; key &amp; ")"
+	ImportFile = True
+	Exit Function
+
+FunctionError:
+	Print "Error importing file: " &amp; fileName &amp; " - " &amp; Error$
+	ImportFile = False
+End Function
+
+</lotusscript></code><code event='ReadFile'><lotusscript>Function ReadFile(filePath As String) As String
+	On Error Goto FunctionError
+
+	Dim fileNum As Integer
+	Dim txt As String
+	Dim content As String
+	Dim first As Boolean
+
+	fileNum = Freefile()
+	Open filePath For Input As fileNum
+	first = True
+	Do While Not Eof(fileNum)
+		Line Input #fileNum, txt
+		If first Then
+			content = txt
+			first = False
+		Else
+			content = content &amp; Chr(10) &amp; txt
+		End If
+	Loop
+	Close fileNum
+
+	ReadFile = content
+	Exit Function
+
+FunctionError:
+	Print "Error reading file: " &amp; filePath &amp; " - " &amp; Error$
+	ReadFile = ""
+End Function</lotusscript></code>
+<item name='$DesignerBuild'><text>Build V1451FP1_06262026</text></item></agent>
+

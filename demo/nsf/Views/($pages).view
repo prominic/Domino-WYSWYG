@@ -1,0 +1,44 @@
+<?xml version='1.0' encoding='utf-8'?>
+<view name='($pages)' xmlns='http://www.lotus.com/dxl' version='14.5' maintenanceversion='1.0'
+ replicaid='86258E8000474322' showinmenu='false' noreplace='true' publicaccess='false'
+ designerversion='8.5.3' unreadmarks='none' onopengoto='lastopened' onrefresh='displayindicator'
+ headers='beveled' opencollapsed='false' showresponsehierarchy='true' showmargin='true'
+ shrinkrows='false' extendlastcolumn='false' showhierarchies='false' unreadcolor='black'
+ rowlinecount='1' headerlinecount='1' rowspacing='1' bgcolor='white' totalscolor='black'
+ headerbgcolor='white' boldunreadrows='false' evaluateactions='false' allownewdocuments='false'
+ allowcustomizations='true' hidemarginborder='false' marginwidth='0px' marginbgcolor='white'
+ uniquekeys='false'>
+<noteinfo noteid='1ce' unid='E9E3CAE76E44BCC7C1258E14003541BA' sequence='10'>
+<created><datetime dst='true'>20260612T114142,34+02</datetime></created>
+<modified><datetime dst='true'>20260928T153008,70+02</datetime></modified>
+<revised><datetime dst='true'>20260928T153008,69+02</datetime></revised>
+<lastaccessed><datetime dst='true'>20260928T153008,69+02</datetime></lastaccessed>
+<addedtofile><datetime dst='true'>20260928T145925,77+02</datetime></addedtofile></noteinfo>
+<code
+ event='selection'><formula>SELECT Form="Page"</formula></code>
+<column sort='ascending' hidedetailrows='false' itemname='Field1' width='30'
+ resizable='true' separatemultiplevalues='false' sortnoaccent='true' sortnocase='true'
+ showaslinks='false'><columnheader title='Text'><font size='9pt' style='bold'/></columnheader></column>
+<column hidedetailrows='false' itemname='Field2' width='12' resizable='true'
+ separatemultiplevalues='false' sortnoaccent='true' sortnocase='true' showaslinks='false'><columnheader
+ title='Date'><font size='9pt' style='bold'/></columnheader><datetimeformat
+ show='date' date='yearmonthday' fourdigityearfor21stcentury='true' zone='never'
+ dateformat='weekdaymonthdayyear' dayformat='twodigitday' monthformat='twodigitmonth'
+ yearformat='fourdigityear' weekdayformat='shortname' dateseparator1=' ' dateseparator2='/'
+ dateseparator3='/' timeseparator=':' preference='usersetting'/></column>
+<column align='right' hidedetailrows='false' itemname='Field3' width='10'
+ resizable='true' separatemultiplevalues='false' sortnoaccent='true' sortnocase='true'
+ showaslinks='false'><columnheader align='right' title='Number'><font size='9pt'
+ style='bold'/></columnheader><numberformat format='general' punctuated='false'
+ parens='false' percent='false' bytes='false'/></column>
+<column hidedetailrows='false' itemname='$4' width='16' resizable='true' separatemultiplevalues='false'
+ sortnoaccent='true' sortnocase='true' showaslinks='false'><columnheader title='Created'><font
+ size='9pt' style='bold'/></columnheader><datetimeformat show='datetime' date='yearmonthday'
+ fourdigityearfor21stcentury='true' time='hourminute' zone='never' dateformat='weekdaymonthdayyear'
+ dayformat='twodigitday' monthformat='twodigitmonth' yearformat='fourdigityear'
+ weekdayformat='shortname' dateseparator1=' ' dateseparator2='/' dateseparator3='/'
+ timeseparator=':' preference='usersetting'/><code event='value'><formula
+>@Created</formula></code></column>
+<item name='$DesignerBuild'><text>Build V1451FP1_06262026</text></item>
+<item name='$DesignerBuild'><text>Build V1451FP1_06262026</text></item></view>
+

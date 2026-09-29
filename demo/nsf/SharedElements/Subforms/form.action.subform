@@ -1,0 +1,25 @@
+<?xml version='1.0' encoding='utf-8'?>
+<subform name='form.action' xmlns='http://www.lotus.com/dxl' version='14.5'
+ maintenanceversion='1.0' replicaid='86258E8000474322' designerversion='8.5.3'
+ renderpassthrough='true'>
+<noteinfo noteid='1d6' unid='D33D7AA166DA28E0C1258E14003018FF' sequence='8'>
+<created><datetime dst='true'>20260612T104521,27+02</datetime></created>
+<modified><datetime dst='true'>20260928T145925,80+02</datetime></modified>
+<revised><datetime dst='true'>20260612T151544,05+02</datetime></revised>
+<lastaccessed><datetime dst='true'>20260928T145925,79+02</datetime></lastaccessed>
+<addedtofile><datetime dst='true'>20260928T145925,79+02</datetime></addedtofile></noteinfo>
+<actionbar bgcolor='#f0f0f0' bordercolor='black'>
+<actionbuttonstyle bgcolor='#f0f0f0'/><font size='9pt' color='system'/><border
+ style='solid' width='0px 0px 1px'/>
+<action title='Edit' icon='29' showinmenu='false' hide='edit previewedit'><code
+ event='click'><formula>@Command([EditDocument])</formula></code></action>
+<action title='Save' icon='35' showinmenu='false' hide='preview read'><code
+ event='click'><formula>@Command([FileSave])</formula></code></action>
+<action title='Save &amp; Close' icon='10' showinmenu='false' hide='preview read'><code
+ event='click'><formula>@Command([FileSave]);
+@PostedCommand([FileCloseWindow])</formula></code></action></actionbar>
+<body><richtext>
+<pardef id='1' hide='notes web mobile'/>
+<par def='1'><run><font color='blue'/>form actions: save, edit, edit &amp; close</run></par></richtext></body>
+<item name='$$ScriptName' summary='false' sign='true'><text>form.action</text></item></subform>
+

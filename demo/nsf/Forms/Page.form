@@ -1,0 +1,41 @@
+<?xml version='1.0' encoding='utf-8'?>
+<form name='Page' xmlns='http://www.lotus.com/dxl' version='14.5' maintenanceversion='1.0'
+ replicaid='86258E8000474322' publicaccess='false' designerversion='8.5.3'
+ renderpassthrough='true'>
+<noteinfo noteid='20a' unid='1C75CB1E50E6E752C1258E1400353EBC' sequence='11'>
+<created><datetime dst='true'>20260612T114134,68+02</datetime></created>
+<modified><datetime dst='true'>20260928T150141,37+02</datetime></modified>
+<revised><datetime dst='true'>20260928T150141,36+02</datetime></revised>
+<lastaccessed><datetime dst='true'>20260928T150141,36+02</datetime></lastaccessed>
+<addedtofile><datetime dst='true'>20260928T145925,94+02</datetime></addedtofile></noteinfo>
+<code
+ event='windowtitle'><formula>"Page"</formula></code>
+<body><richtext>
+<pardef id='1'/>
+<par def='1'/>
+<par def='1'><run><font size='16pt'/>Page</run></par>
+<par def='1'/>
+<par def='1'>text: <field type='text' kind='editable' name='Field1'/><compositedata
+ type='98' prevtype='65418' nexttype='222' afterparcount='6' containertype='65418'
+ aftercontainercount='1' afterbegincount='3'>
+Yg4BAIQAAAAAAAAAAAA=
+</compositedata></par>
+<par def='1'>date: <field type='datetime' kind='editable' name='Field2'><datetimeformat
+ show='date' date='yearmonthday' fourdigityearfor21stcentury='true' zone='never'
+ dateformat='weekdaymonthdayyear' dayformat='twodigitday' monthformat='twodigitmonth'
+ yearformat='fourdigityear' weekdayformat='shortname' dateseparator1=' ' dateseparator2='/'
+ dateseparator3='/' timeseparator=':' preference='usersetting'/></field></par>
+<par def='1'>number: <field type='number' kind='editable' name='Field3'><numberformat
+ format='general' digits='2' punctuated='false' parens='false' percent='false'
+ bytes='false'/></field></par>
+<par def='1'/>
+<par def='1'>richText:</par>
+<par def='1'><field type='richtext' kind='editable' name='field4'/><compositedata
+ type='98' prevtype='65418' nexttype='222' afterparcount='7' containertype='65418'
+ aftercontainercount='1' afterbegincount='4'>
+Yg4BAIQAAAAAAAAAAAA=
+</compositedata></par></richtext></body>
+<item name='$DesignerBuild'><text>Build V1451FP1_06262026</text></item>
+<item name='$$ScriptName' summary='false' sign='true'><text>User</text></item>
+<item name='Field3' summary='false'><number>0</number></item></form>
+

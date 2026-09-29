@@ -1,0 +1,22 @@
+<?xml version='1.0' encoding='utf-8'?>
+<form name='CSS.web' alias='CSS' xmlns='http://www.lotus.com/dxl' version='14.5'
+ maintenanceversion='1.0' replicaid='86258E8000474322' hide='notes' nocompose='true'
+ noquery='true' treatashtml='true' publicaccess='false' designerversion='8.5.3'
+ renderpassthrough='true'>
+<noteinfo noteid='1aa' unid='1EE672736CC3C736C1258E140044C6CC' sequence='6'>
+<created><datetime dst='true'>20260612T143113,40+02</datetime></created>
+<modified><datetime dst='true'>20260928T145925,68+02</datetime></modified>
+<revised><datetime dst='true'>20260612T151543,74+02</datetime></revised>
+<lastaccessed><datetime dst='true'>20260928T145925,67+02</datetime></lastaccessed>
+<addedtofile><datetime dst='true'>20260928T145925,67+02</datetime></addedtofile></noteinfo>
+<body><richtext>
+<pardef id='1'/>
+<par def='1'><field type='text' kind='editable' name='Body'/><compositedata
+ type='98' prevtype='65418' nexttype='222' afterparcount='6' containertype='65418'
+ aftercontainercount='1' afterbegincount='3'>
+Yg4BAIQAAAAAAAAAAAA=
+</compositedata></par></richtext></body>
+<item name='$MimeType'><text>text/css</text></item>
+<item name='$DesignerBuild'><text>Build V1451_03042026</text></item>
+<item name='$$ScriptName' summary='false' sign='true'><text>CSS</text></item></form>
+

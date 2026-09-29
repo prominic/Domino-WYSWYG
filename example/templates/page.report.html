@@ -1,0 +1,34 @@
+<div class="container">
+  <div class="row justify-content-center">
+    <div class="col-lg-9">
+
+      <div class="d-flex justify-content-between align-items-center mt-3 mb-3">
+        <h1 class="h4 mb-0">
+          <i class="bi bi-clipboard-data me-2"></i>{{report.title}}
+        </h1>
+        <div class="d-flex gap-2">
+          {{#report.unid}}
+          <a href="{{&config.baseurl}}/router?openagent&req=page&unid={{report.unid}}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Page
+          </a>
+          {{/report.unid}}
+          {{^report.unid}}
+          <a href="{{&config.baseurl}}/router?openagent&req=home" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Pages
+          </a>
+          {{/report.unid}}
+          <button type="button" class="btn btn-primary btn-sm" data-copy="report-text">
+            <i class="bi bi-clipboard me-1"></i>Copy
+          </button>
+        </div>
+      </div>
+
+      <p class="text-body-secondary small">
+        Copy this text and send it to the developer: it shows how the rich text converts for the web - what is kept,
+        what is not known yet, and the Notes content itself (pictures shortened). It holds the document's text.
+      </p>
+      <pre id="report-text" class="rich-report border rounded bg-light p-2">{{report.text}}</pre>
+
+    </div>
+  </div>
+</div>

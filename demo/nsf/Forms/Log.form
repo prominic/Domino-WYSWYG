@@ -1,0 +1,33 @@
+<?xml version='1.0' encoding='utf-8'?>
+<form name='Log' xmlns='http://www.lotus.com/dxl' version='14.5' maintenanceversion='1.0'
+ replicaid='86258E8000474322' hide='web' nocompose='true' noquery='true' publicaccess='false'
+ designerversion='8.5.3' renderpassthrough='true'>
+<noteinfo noteid='1f2' unid='A1837826533C60EEC1258E14003018D6' sequence='8'>
+<created><datetime dst='true'>20260612T104520,86+02</datetime></created>
+<modified><datetime dst='true'>20260928T145925,89+02</datetime></modified>
+<revised><datetime dst='true'>20260612T151543,86+02</datetime></revised>
+<lastaccessed><datetime dst='true'>20260928T145925,88+02</datetime></lastaccessed>
+<addedtofile><datetime dst='true'>20260928T145925,88+02</datetime></addedtofile></noteinfo>
+<code
+ event='windowtitle'><formula>"Log"</formula></code>
+<actionbar bgcolor='#f0f0f0' bordercolor='black'>
+<actionbuttonstyle bgcolor='#f0f0f0'/><font size='9pt' color='system'/><border
+ style='solid' width='0px 0px 1px'/>
+<action title='Close' icon='11'><code event='click'><formula>@Command([FileCloseWindow])</formula></code></action></actionbar>
+<body><richtext>
+<pardef id='1'/>
+<par def='1'/>
+<par def='1'><run><font color='navy'/><field type='text' kind='editable' name='Subject'/></run><compositedata
+ type='98' prevtype='65418' nexttype='222' afterparcount='5' containertype='65418'
+ aftercontainercount='1' afterbegincount='3'>
+Yg4BAIQAAAAAAAAAAAA=
+</compositedata></par>
+<par def='1'><horizrule height='0.0299in' width='100%' use3dshading='false'
+ color='navy'/></par>
+<par def='1'><run><font color='maroon'/><field type='text' kind='editable'
+ name='Body'/></run><compositedata type='98' prevtype='65418' nexttype='222'
+ afterparcount='5' containertype='65418' aftercontainercount='1' afterbegincount='3'>
+Yg4BAIQAAAAAAAAAAAA=
+</compositedata></par></richtext></body>
+<item name='$$ScriptName' summary='false' sign='true'><text>Log</text></item></form>
+

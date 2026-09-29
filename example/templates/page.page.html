@@ -1,0 +1,104 @@
+<div class="container">
+  <div class="row justify-content-center">
+    <div class="col-lg-9">
+
+      <div class="d-flex justify-content-between align-items-center mt-3 mb-3">
+        <h1 class="h4 mb-0">
+          <i class="bi bi-file-richtext me-2"></i>{{#page.isnew}}New page{{/page.isnew}}{{^page.isnew}}{{#page.text}}{{page.text}}{{/page.text}}{{^page.text}}Page{{/page.text}}{{/page.isnew}}
+        </h1>
+        <div class="d-flex gap-2">
+          <a href="{{&config.baseurl}}/router?openagent&req=home" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Pages
+          </a>
+          {{#canEdit}}{{^page.isnew}}
+          {{! how the rich text converts - text to send the developer }}
+          <a href="{{&config.baseurl}}/router?openagent&req=report&unid={{page.unid}}" class="btn btn-outline-secondary btn-sm" title="How this page's rich text converts - to send to the developer">
+            <i class="bi bi-clipboard-data me-1"></i>Report
+          </a>
+          {{/page.isnew}}{{/canEdit}}
+          {{^edit}}{{#canEdit}}
+          <a href="{{&config.baseurl}}/router?openagent&req=page&unid={{page.unid}}&edit=1" class="btn btn-primary btn-sm">
+            <i class="bi bi-pencil me-1"></i>Edit
+          </a>
+          {{/canEdit}}
+          {{^canEdit}}
+          {{! no app session: Domino's own login, then the ACL decides }}
+          <a href="{{&config.baseurl}}/router?openagent&req=page&unid={{page.unid}}&edit=1&Login" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-box-arrow-in-right me-1"></i>Sign in to edit
+          </a>
+          {{/canEdit}}{{/edit}}
+        </div>
+      </div>
+
+      {{#saved}}<div class="alert alert-success py-2" role="status"><i class="bi bi-check-circle me-1"></i>Saved.</div>{{/saved}}
+      {{#rtUnknown}}<div class="alert alert-warning py-2 small" role="status"><i class="bi bi-puzzle me-1"></i>Notes elements the web does not know yet (shown by their content, saved as they are): {{rtUnknown}}. {{#canEdit}}<a href="{{&config.baseurl}}/router?openagent&req=report&unid={{page.unid}}" class="alert-link">Send the report</a> so they can be supported.{{/canEdit}}</div>{{/rtUnknown}}
+      {{#err}}<div class="alert alert-danger py-2" role="alert"><i class="bi bi-exclamation-triangle me-1"></i>{{err}}{{#log}} <a href="{{&config.baseurl}}/router?openagent&req=report&log={{log}}" class="alert-link">Details for the developer</a>{{/log}}</div>{{/err}}
+
+      {{! ---- read ------------------------------------------------------ }}
+      {{^edit}}
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <dl class="row mb-0">
+            <dt class="col-sm-3">Text <span class="text-body-secondary fw-normal small">Field1</span></dt>
+            <dd class="col-sm-9">{{#page.text}}{{page.text}}{{/page.text}}{{^page.text}}<span class="text-body-secondary">empty</span>{{/page.text}}</dd>
+            <dt class="col-sm-3">Date <span class="text-body-secondary fw-normal small">Field2</span></dt>
+            <dd class="col-sm-9">{{#page.date}}{{page.date}}{{/page.date}}{{^page.date}}<span class="text-body-secondary">empty</span>{{/page.date}}</dd>
+            <dt class="col-sm-3">Number <span class="text-body-secondary fw-normal small">Field3</span></dt>
+            <dd class="col-sm-9">{{#page.number}}{{page.number}}{{/page.number}}{{^page.number}}<span class="text-body-secondary">empty</span>{{/page.number}}</dd>
+            <dt class="col-sm-12">Rich text <span class="text-body-secondary fw-normal small">field4</span></dt>
+            <dd class="col-sm-12 mb-0">
+              {{#page.bodyHtml}}<div class="rich border rounded p-2 overflow-x-auto">{{&page.bodyHtml}}</div>{{/page.bodyHtml}}
+              {{^page.bodyHtml}}<span class="text-body-secondary">empty</span>{{/page.bodyHtml}}
+            </dd>
+          </dl>
+        </div>
+      </div>
+      {{/edit}}
+
+      {{! ---- edit ------------------------------------------------------ }}
+      {{#edit}}
+      <form id="page-form" method="post" action="{{&config.baseurl}}/router?openagent&req=page.save{{^page.isnew}}&unid={{page.unid}}{{/page.isnew}}">
+        <input type="hidden" name="lastmod" value="{{page.lastmod}}">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label for="f-text" class="form-label">Text <span class="text-body-secondary small">Field1</span></label>
+                <input type="text" class="form-control" id="f-text" name="text" value="{{page.text}}">
+              </div>
+              <div class="col-md-3">
+                <label for="f-date" class="form-label">Date <span class="text-body-secondary small">Field2</span></label>
+                <input type="date" class="form-control" id="f-date" name="date" value="{{page.dateIso}}">
+              </div>
+              <div class="col-md-3">
+                <label for="f-number" class="form-label">Number <span class="text-body-secondary small">Field3</span></label>
+                <input type="number" step="any" class="form-control" id="f-number" name="number" value="{{page.number}}">
+              </div>
+              <div class="col-12">
+                <span class="form-label d-block">Rich text <span class="text-body-secondary small">field4</span></span>
+                {{! the rich-text kit: the hidden field is DISABLED - the kit JS
+                     enables it only when the editor changed, so saving the
+                     other fields never rewrites the Notes rich text }}
+                {{^page.bodyLocked}}
+                <div class="rich-toolbar d-flex flex-wrap align-items-center gap-1 border border-bottom-0 rounded-top bg-light p-1" data-editor="ed-body"></div>
+                <div id="ed-body" class="rich-editor rich" contenteditable="true" spellcheck="true" data-target="h-body">{{&page.bodyHtml}}</div>
+                <input type="hidden" id="h-body" name="body" disabled>
+                {{/page.bodyLocked}}
+                {{#page.bodyLocked}}
+                <div class="rich border rounded p-2 overflow-x-auto">{{&page.bodyHtml}}</div>
+                <p class="form-text mb-0"><i class="bi bi-lock me-1"></i>Read-only here - it holds {{page.bodyLockReason}}, which the web editor cannot keep. Edit it in Notes, or <a href="{{&config.baseurl}}/router?openagent&req=report&unid={{page.unid}}">send the report</a> to have it supported.</p>
+                {{/page.bodyLocked}}
+              </div>
+            </div>
+          </div>
+          <div class="card-footer d-flex justify-content-end gap-2 py-2">
+            <a href="{{&config.baseurl}}/router?openagent&req={{#page.isnew}}home{{/page.isnew}}{{^page.isnew}}page&unid={{page.unid}}{{/page.isnew}}" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save</button>
+          </div>
+        </div>
+      </form>
+      {{/edit}}
+
+    </div>
+  </div>
+</div>

@@ -1,0 +1,35 @@
+<?xml version='1.0' encoding='utf-8'?>
+<form name='CSS' xmlns='http://www.lotus.com/dxl' version='14.5' maintenanceversion='1.0'
+ replicaid='86258E8000474322' hide='web' nocompose='true' noquery='true' publicaccess='false'
+ designerversion='8.5.3'>
+<noteinfo noteid='1fe' unid='9B7E427C5F10ECF7C1258E14003018B9' sequence='12'>
+<created><datetime dst='true'>20260612T104520,57+02</datetime></created>
+<modified><datetime dst='true'>20260928T145925,92+02</datetime></modified>
+<revised><datetime dst='true'>20260612T151543,72+02</datetime></revised>
+<lastaccessed><datetime dst='true'>20260928T145925,91+02</datetime></lastaccessed>
+<addedtofile><datetime dst='true'>20260928T145925,91+02</datetime></addedtofile></noteinfo>
+<code
+ event='windowtitle'><formula>"CSS"</formula></code>
+<body><richtext>
+<pardef id='1' hide='notes web mobile'/><subformref name='form.action'/>
+<pardef id='2'/>
+<par def='2'/>
+<pardef id='3' leftmargin='1in' tabs='L0.5000in L1in L1.5000in L2in L2.5000in L3in L3.5000in L4in'/>
+<par def='3'><run><font size='16pt' style='bold'/>CSS</run></par>
+<par def='2'/>
+<par def='2'>Name: <field type='text' kind='editable' name='Name'><code event='defaultvalue'><formula
+>"custom-20240106-1.css"</formula></code></field><compositedata type='98'
+ prevtype='65418' nexttype='222' afterparcount='6' containertype='65418' aftercontainercount='1'
+ afterbegincount='3'>
+Yg4BAIQAAAAAAAAAAAA=
+</compositedata></par>
+<par def='2'/>
+<par def='2'>Body:</par>
+<par def='2'><field type='text' kind='editable' name='Body'/><compositedata
+ type='98' prevtype='65418' nexttype='222' afterparcount='5' containertype='65418'
+ aftercontainercount='1' afterbegincount='3'>
+Yg4BAIQAAAAAAAAAAAA=
+</compositedata></par></richtext></body>
+<item name='$SubForm_RepIDs' sign='true'><text>0000000000000000</text></item>
+<item name='$$ScriptName' summary='false' sign='true'><text>JS</text></item></form>
+
