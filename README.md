@@ -4,14 +4,14 @@ A Notes rich-text field on the web - edited from both ends. For HCL Domino web a
 
 Show a Notes rich-text field in a web page as Notes shows it, edit it in a WYSIWYG editor, and save it back **as classic Notes rich text** - so the same field can be edited from the Notes client and from the browser, and each end sees what the other did.
 
-Version 1.0.3 (2026-09-29). Java 8, tested on Domino 12. Apache License 2.0. See [CHANGELOG.md](CHANGELOG.md).
+Version 1.1.0 (2026-09-29). Java 8, tested on Domino 12. Apache License 2.0. See [CHANGELOG.md](CHANGELOG.md).
 
 ![The editor, showing a Notes body with fonts, a link, an attachment, a doclink, a picture and a table](docs/editor.png)
 
 ## What it does
 
-- **Reads** classic rich text from the item's DXL and renders it element by element: fonts, sizes, colours, the three Notes highlights, alignment, indents, bullet and numbered lists of every Notes type, tabs, tables (widths, borders, colours, spans), pictures, URL links, doclinks, view and database links, attachment icons. MIME (mail-style) bodies are shown as they are, read-only.
-- **Writes** what the editor posts back as classic rich text through a DXL import - not as MIME/HTML. Whatever the user did not touch goes back **exactly as it was**: the original paragraph definitions, pictures (a Notes bitmap stays a Notes bitmap), doclinks, attachment icons, table settings and list types are reused, not rebuilt.
+- **Reads** classic rich text from the item's DXL and renders it element by element: fonts, sizes, colours, the three Notes highlights, alignment, indents, bullet and numbered lists of every Notes type, tabs, tables (widths, borders, colours, spans), pictures, URL links, doclinks, view and database links, attachment icons. A MIME (mail-style) body is shown from its HTML part with its pictures, and edited like the others.
+- **Writes** what the editor posts back as classic rich text through a DXL import - not as MIME/HTML - and a MIME body back as MIME, so an item keeps the format it had. Whatever the user did not touch goes back **exactly as it was**: the original paragraph definitions, pictures (a Notes bitmap stays a Notes bitmap), doclinks, attachment icons, table settings and list types are reused, not rebuilt.
 - **Keeps what the web cannot edit.** Hotspots, buttons, popups, sections, computed text, pass-thru HTML, paragraphs hidden in Notes and elements it does not know are shown as *islands*: visible, not editable, written back verbatim. Deleting one deletes it. Only an OLE object (or a body over 8 MB) makes a body read-only, and the page can say why.
 - **Posts only what changed.** A body the user did not touch is never sent, so saving the other fields of a form can never flatten a rich-text field.
 - **Attaches files** from the editor, stored as real Notes attachments with an icon in the text. Deleting an icon deletes the file, as in Notes.
@@ -167,7 +167,7 @@ When the server refuses a save, the page comes back with the error and the edito
 
 Editor-made markup without an original is written as the nearest Notes form: headings as bold, larger runs; `blockquote` as indented paragraphs; `pre` as monospace; nested lists as deeper indents.
 
-A MIME body is read part by part and shown; it is read-only on the web in this version - a web save would store classic rich text next to the note's MIME flags, which has not been verified.
+A MIME body is read part by part and edited; a save gives it back as MIME - one `text/html` part, or `multipart/related` with a part per picture (PNG, GIF, JPEG) - which the Notes client renders natively. `Body.mime` tells the handler which kind it read. It stays read-only when such a save could not give it back whole: a second HTML part, a file inside the body, a picture outside the text. A file cannot be attached to a MIME body from the web.
 
 ## Security
 
@@ -229,7 +229,7 @@ On the server:
 - Line and paragraph spacing, cell merging, per-cell borders: kept as they are, not editable.
 - Row spans: the table menu works by column position; a cell spanning rows is not split or joined.
 - Encrypted items block a web save (by design); what the import does to a signed item's signature and to the document's `$UpdatedBy`/`$Revisions` history is not yet verified on a server.
-- MIME (mail-style) bodies are read-only on the web.
+- A MIME body with a file part, a second HTML part or a picture outside the text is read-only; a file cannot be attached to a MIME body from the web.
 
 ## Support
 

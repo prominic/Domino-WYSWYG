@@ -1,5 +1,10 @@
 # Changelog - Domino WYSIWYG
 
+## 1.1.0 - 2026-09-29
+
+- MIME (mail-style) bodies are edited too, and go back as MIME: one `text/html` part, or `multipart/related` with a part per picture - the format the Notes client renders natively. An application whose bodies an earlier web editor saved as MIME keeps them as they are; a classic body stays classic. `Body.mime` says which kind was read. Read-only remains for what such a save could not carry (a second HTML part, a file inside the body, a picture outside the text), and a file cannot be attached to a MIME body from the web.
+- Demo: the Import UI agent stores a CSS/JS body over 32K as a non-summary text item (64K) and says so past 64K, instead of failing at Save.
+
 ## 1.0.3 - 2026-09-29
 
 - Named colours: DXL names colours as CSS2 does (the exporter writes `#008000` as `green` and `#00ff00` as `lime`); the kit knew only Notes' palette names, so `lime`, `purple`, `fuchsia`, `navy`, `olive`, `teal`, `aqua` and `maroon` were dropped on the page - and by the next web save - and `green` showed in the wrong shade. All sixteen names, `none` and `system` now map and round-trip; a fixture with every name is in the browser cycle.

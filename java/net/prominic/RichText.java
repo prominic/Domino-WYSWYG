@@ -101,11 +101,14 @@ public class RichText {
 		public final String html;
 		public final boolean locked;
 		public final String reason;
+		/* a MIME (mail-style) item: write() gives it back as MIME */
+		public final boolean mime;
 
-		Body(String html, Set<String> reasons) {
+		Body(String html, Set<String> reasons, boolean mime) {
 			this.html = html;
 			this.locked = !reasons.isEmpty();
 			this.reason = String.join(", ", reasons);
+			this.mime = mime;
 		}
 	}
 
@@ -152,6 +155,18 @@ public class RichText {
 	private static final Pattern CLEAN_LINK = Pattern.compile("<a href=\"");
 
 	private final Session m_session;
+	/* a picture posted with a MIME body: an <img> with a data: URI in a
+	 * format the Notes client shows (the attributes before src kept) */
+	private static final Pattern DATA_IMG = Pattern
+			.compile("<img\\b([^>]*?)\\ssrc=\"data:image/(png|gif|jpeg);base64,([A-Za-z0-9+/=]+)\"");
+
+	/* a cid: reference in POSTED html points at no part of this save */
+	private static final Pattern POSTED_CID = Pattern.compile("<img\\b[^>]*?\\ssrc=\"cid:[^\"]*\"[^>]*>");
+
+	/* the page's own markers mean nothing in a MIME body */
+	private static final Pattern MARKERS = Pattern
+			.compile("\\sdata-(pd|pic|cap|tbl|list|hr|fx|keep|kind|file)=\"[^\"]*\"");
+
 	private int m_pictureBudget = 2 * 1024 * 1024;
 	private String m_fileDbUrl = null;
 	private String m_linkReplica = null;
@@ -259,12 +274,14 @@ public class RichText {
 
 	public Body read(Document doc, String item) throws NotesException {
 		Set<String> reasons = new java.util.LinkedHashSet<>();
-		String html = render(doc, item, reasons);
-		return new Body(html, reasons);
+		boolean[] mime = new boolean[1];
+		String html = render(doc, item, reasons, mime);
+		return new Body(html, reasons, mime[0]);
 	}
 
-	/* reasons: why the body must be read-only - empty when it can be edited */
-	private String render(Document doc, String item, Set<String> reasons) throws NotesException {
+	/* reasons: why the body must be read-only - empty when it can be edited;
+	 * mime[0]: the item is MIME */
+	private String render(Document doc, String item, Set<String> reasons, boolean[] mime) throws NotesException {
 		Item it = doc.getFirstItem(item);
 		if (it == null) {
 			return "";
@@ -272,6 +289,7 @@ public class RichText {
 		long start = System.currentTimeMillis();
 		try {
 			int type = it.getType();
+			mime[0] = type == Item.MIME_PART;
 			if (type == Item.MIME_PART || type == Item.RICHTEXT) {
 				m_conversions++;
 				try {
@@ -279,11 +297,6 @@ public class RichText {
 							? mimeHtml(doc.getMIMEEntity(item), reasons)
 							: classicHtml(doc, item, (RichTextItem) it, reasons);
 					if (html != null) {
-						if (type == Item.MIME_PART) {
-							// a web save would store classic rich text next to the
-							// note's MIME flags ($NoteHasNativeMIME) - not verified
-							reasons.add("a MIME (mail-style) body");
-						}
 						return html;
 					}
 				} catch (Exception e) {
@@ -1346,6 +1359,7 @@ public class RichText {
 	 *  4. the document is imported back with REPLACE and read back: form,
 	 *     item and attachments as expected - else the original DXL goes back
 	 *     in and the save reports it.
+	 * A MIME item goes back as MIME instead, the format it had (writeMime).
 	 * The caller saves its own item changes BEFORE calling this. doc is
 	 * recycled here - the import replaces the note under it.
 	 */
@@ -1362,6 +1376,11 @@ public class RichText {
 			lotus.domino.Database db = doc.getParentDatabase();
 			unid = doc.getUniversalID();
 			form = doc.getItemValueString("Form");
+			if (isMime(doc, item)) {
+				recycle(doc);
+				writeMime(db, unid, item, html);
+				return;
+			}
 			Set<String> filesBefore = requireWithinLimits(doc);
 			recycle(doc); // no stale handle may stay open under the import
 
@@ -1408,6 +1427,122 @@ public class RichText {
 					original == null ? null : itemDxl(original, item));
 			throw e;
 		}
+	}
+
+	/* the item is MIME (mail-style) - seen on the caller's handle, opened
+	 * with MIME conversion off */
+	private static boolean isMime(Document doc, String item) throws NotesException {
+		Item it = doc.getFirstItem(item);
+		try {
+			return it != null && it.getType() == Item.MIME_PART;
+		} finally {
+			recycle(it);
+		}
+	}
+
+	/*
+	 * A MIME item goes back as MIME, the format it had, which the Notes
+	 * client renders natively: one text/html part, or multipart/related
+	 * with a part per picture the HTML shows - its own pictures came to the
+	 * page as data: URIs and go back the same way, a pasted one with them.
+	 * A file cannot be attached to it from the web. The old entity goes
+	 * first through its entity object: Domino may keep large parts in
+	 * objects of their own, which removeItem alone leaves behind as orphan
+	 * attachments on every save (seen in OilProducts, 2026-08). The save is
+	 * not forced: a save from elsewhere since the page was opened wins.
+	 */
+	private void writeMime(lotus.domino.Database db, String unid, String item, String html) throws Exception {
+		if (!m_newFiles.isEmpty() || html.contains(" data-file=")) {
+			throw new Exception("A file cannot be attached to this text from the web (it is a MIME body)"
+					+ " - the rich text was not saved; attach the file in Notes");
+		}
+		List<String[]> pictures = new ArrayList<>();
+		String body = extractPictures(stripMarkers(html), pictures);
+		Document doc = db.getDocumentByUNID(unid);
+		MIMEEntity root = null;
+		Stream stream = null;
+		try {
+			removeMime(doc, item);
+			root = doc.createMIMEEntity(item);
+			stream = m_session.createStream();
+			if (pictures.isEmpty()) {
+				stream.writeText(body);
+				root.setContentFromText(stream, "text/html; charset=UTF-8", MIMEEntity.ENC_NONE);
+			} else {
+				// the parent's type first, then its children - the documented
+				// order; Domino makes the boundary. One stream serves every
+				// part: content is copied when it is set, truncate() between
+				MIMEHeader type = root.createHeader("Content-Type");
+				type.setHeaderVal("multipart/related");
+				recycle(type);
+				MIMEEntity text = root.createChildEntity();
+				stream.writeText(body);
+				text.setContentFromText(stream, "text/html; charset=UTF-8", MIMEEntity.ENC_NONE);
+				recycle(text);
+				for (String[] picture : pictures) {
+					stream.truncate();
+					stream.write(Base64.getDecoder().decode(picture[2]));
+					stream.setPosition(0);
+					MIMEEntity part = root.createChildEntity();
+					part.setContentFromBytes(stream, "image/" + picture[1], MIMEEntity.ENC_IDENTITY_BINARY);
+					part.encodeContent(MIMEEntity.ENC_BASE64);
+					MIMEHeader id = part.createHeader("Content-ID");
+					id.setHeaderVal("<" + picture[0] + ">");
+					MIMEHeader disposition = part.createHeader("Content-Disposition");
+					disposition.setHeaderVal("inline");
+					recycle(id, disposition, part);
+				}
+			}
+			doc.closeMIMEEntities(true, item);
+			if (!doc.save(false, false)) {
+				throw new Exception("Someone else saved this document since the page was opened"
+						+ " - the rich text was not saved; reload the page and make the change again");
+			}
+		} finally {
+			if (stream != null) {
+				stream.close();
+			}
+			recycle(stream, root, doc);
+		}
+	}
+
+	/* the old body through its entity first (see writeMime), then removeItem
+	 * clears whatever is left */
+	private static void removeMime(Document doc, String item) throws NotesException {
+		MIMEEntity old = doc.getMIMEEntity(item);
+		if (old != null) {
+			try {
+				old.remove();
+				doc.closeMIMEEntities(true, item);
+			} catch (NotesException e) {
+				// best effort - removeItem below still clears the item
+			} finally {
+				recycle(old);
+			}
+		}
+		doc.removeItem(item);
+	}
+
+	/* the data: pictures of the HTML -> {cid, subtype, base64} parts, each
+	 * replaced by its cid: reference; a posted cid: reference goes */
+	private static String extractPictures(String html, List<String[]> pictures) {
+		String posted = POSTED_CID.matcher(html).replaceAll("");
+		String stamp = Long.toHexString(System.currentTimeMillis());
+		Matcher m = DATA_IMG.matcher(posted);
+		StringBuilder out = new StringBuilder(posted.length());
+		int last = 0;
+		while (m.find()) {
+			String cid = "rt" + (pictures.size() + 1) + "." + stamp + "@richtext";
+			pictures.add(new String[] { cid, m.group(2), m.group(3) });
+			out.append(posted, last, m.start()).append("<img").append(m.group(1)).append(" src=\"cid:").append(cid)
+					.append('"');
+			last = m.end();
+		}
+		return out.append(posted, last, posted.length()).toString();
+	}
+
+	private static String stripMarkers(String html) {
+		return MARKERS.matcher(html).replaceAll("");
 	}
 
 	/* the document's attachments and the files to add must fit the limits;
@@ -3187,7 +3322,7 @@ public class RichText {
 	/* ------------------------------------------------------------- reports */
 
 	/* the kit version, first line of every report (kit/CHANGELOG.md) */
-	public static final String VERSION = "1.0.3 (2026-09-29)";
+	public static final String VERSION = "1.1.0 (2026-09-29)";
 	private static final String KIT = "RichText kit " + VERSION;
 
 	/* a report section longer than this is cut */

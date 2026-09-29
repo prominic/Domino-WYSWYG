@@ -142,6 +142,23 @@ public class RichTextCheck {
 		int letters = (Integer) hl.invoke(null, "<p class=\"x\">ab<img src=\"data:image/png;base64,QUJDZGVm\" />&amp;&eacute;c</p>");
 		check("htmlLetters counts visible letters only (3)", letters == 3, String.valueOf(letters));
 
+		System.out.println("MIME - a MIME body goes back as MIME: its pictures become cid: parts, the page's markers go");
+		Method extract = kit.getDeclaredMethod("extractPictures", String.class, java.util.List.class);
+		extract.setAccessible(true);
+		Method strip = kit.getDeclaredMethod("stripMarkers", String.class);
+		strip.setAccessible(true);
+		java.util.List<String[]> parts = new java.util.ArrayList<>();
+		String mimeIn = "<div data-pd=\"1\">a <img src=\"data:image/png;base64,iVBORw0KGgo=\" width=\"10\" height=\"5\"> b"
+				+ " <img class=\"x\" src=\"data:image/jpeg;base64,/9j/4AAQ\"> <img src=\"cid:old@nowhere\"> c</div>";
+		String mimeOut = (String) extract.invoke(null, (String) strip.invoke(null, mimeIn), parts);
+		check("MIME: two picture parts (" + parts.size() + ")", parts.size() == 2, mimeOut);
+		check("MIME: the png part carries its base64", parts.size() == 2 && "png".equals(parts.get(0)[1])
+				&& "iVBORw0KGgo=".equals(parts.get(0)[2]) && "jpeg".equals(parts.get(1)[1]), mimeOut);
+		has("MIME: cid references in place, the other attributes kept", mimeOut,
+				"<img src=\"cid:" + (parts.isEmpty() ? "?" : parts.get(0)[0]) + "\" width=\"10\" height=\"5\">",
+				"<img class=\"x\" src=\"cid:" + (parts.size() < 2 ? "?" : parts.get(1)[0]) + "\">");
+		lacks("MIME: no data: left, the posted cid: dropped, the marker gone", mimeOut, "data:image", "cid:old@nowhere", "data-pd");
+
 		System.out.println("Scale: a 1.5 MB pasted picture goes through the sanitizer");
 		StringBuilder big = new StringBuilder("<p>x</p><img src=\"data:image/png;base64,");
 		for (int i = 0; i < 2000000 / 4; i++) big.append("QUJD");

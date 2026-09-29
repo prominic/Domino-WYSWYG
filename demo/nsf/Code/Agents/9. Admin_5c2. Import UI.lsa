@@ -2,10 +2,10 @@
 <agent name='9. Admin\2. Import UI' xmlns='http://www.lotus.com/dxl' version='14.5'
  maintenanceversion='1.0' replicaid='86258E8000474322' hide='v3' publicaccess='false'
  designerversion='8.5.3'>
-<noteinfo noteid='29a' unid='8C75EFF4994708A5C1258E14003016EF' sequence='22'>
+<noteinfo noteid='29a' unid='8C75EFF4994708A5C1258E14003016EF' sequence='23'>
 <created><datetime dst='true'>20260612T104515,99+02</datetime></created>
-<modified><datetime dst='true'>20260929T113834,99+02</datetime></modified>
-<revised><datetime dst='true'>20260929T113834,98+02</datetime></revised>
+<modified><datetime dst='true'>20260929T142208,00+02</datetime></modified>
+<revised><datetime dst='true'>20260929T142208,00+02</datetime></revised>
 <lastaccessed><datetime dst='true'>20260929T113834,98+02</datetime></lastaccessed>
 <addedtofile><datetime dst='true'>20260928T145926,15+02</datetime></addedtofile></noteinfo>
 <designchange><datetime dst='true'>20260929T113834,95+02</datetime></designchange>
@@ -64,6 +64,7 @@ End Sub
 	Dim view As NotesView
 	Dim doc As NotesDocument
 	Dim rtBody As NotesRichTextItem
+	Dim item As NotesItem
 	Dim content As String
 	Dim key As String
 	Dim formName As String
@@ -103,7 +104,14 @@ End Sub
 	End If
 
 	' Body: rich text for templates (matches the Template form and has no
-	' 64KB limit), plain text item for CSS/JS (matches their web forms)
+	' 64KB limit), plain text item for CSS/JS (matches their web forms).
+	' A text item is summary by default and then 32K at most; non-summary
+	' it holds 64K, and the web form reads it the same (the app script is
+	' past 32K since 2026-09-29). Past 64K the form's Body must become
+	' rich text - said here rather than failing at Save with "too large"
+	If formName &lt;&gt; "Template" And Len(content) &gt; 64000 Then
+		Error 1001, fileName &amp; " is over 64 KB - a text Body cannot hold it; make the " &amp; formName &amp; " form's Body rich text (as Template) first"
+	End If
 	If doc.HasItem("Body") Then
 		Call doc.RemoveItem("Body")
 	End If
@@ -111,7 +119,8 @@ End Sub
 		Set rtBody = New NotesRichTextItem(doc, "Body")
 		Call rtBody.AppendText(content)
 	Else
-		Call doc.ReplaceItemValue("Body", content)
+		Set item = doc.ReplaceItemValue("Body", content)
+		item.IsSummary = False
 	End If
 
 	Call doc.Save(True, False)
