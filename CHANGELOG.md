@@ -1,5 +1,13 @@
 # Changelog - Domino WYSIWYG
 
+## 1.0.1 - 2026-09-29
+
+- A picture resized in the editor could not be saved: the scaled size was written in pixels, which Domino's DXL importer refuses ("Length value is invalid") although the DTD allows it. It is written in inches, as the exporter writes it.
+- A doclink made on the web could not be saved: its replica ID was written in the colon form Notes displays (`XXXXXXXX:XXXXXXXX`), which the importer refuses ("Hexadecimal number value is invalid"); the importer takes 16 plain hex digits, as the exporter writes them. Applied to new doclinks, originals and islands alike.
+- Every document with an attachment was refused with "encrypted field": the guard keyed on the `seal='true'` flag every `$FILE` item carries. It now looks for a `$Seal` or `SecretEncryptionKeys` item.
+- After a save the server refused, the editor's content is put back from a draft kept in session storage instead of being lost.
+- Read: the item's size is summed over its segments without recycling the wrappers `getItems()` hands out, which had invalidated the reader's own item and made every classic body read-only.
+
 ## 1.0.0 - 2026-09-29
 
 First shareable release.

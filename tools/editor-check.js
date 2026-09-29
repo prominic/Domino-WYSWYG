@@ -96,6 +96,7 @@ window.addEventListener("load", function () {
     function () { window.__answer = "50"; press("Picture size (click a picture first)"); },
     function () { document.getElementById("page-form").dispatchEvent(new Event("submit"));
       var h = document.getElementById("h"); log.enabled = !h.disabled; log.posted = h.value;
+      try { log.draft = sessionStorage.getItem("rich-draft:ed:" + location.pathname) === h.value; } catch (e) { log.draft = "no storage"; }
       document.getElementById("out").textContent = JSON.stringify(log); }
   ];
   var i = 0;
@@ -164,6 +165,7 @@ run().then((log) => {
   check("indent -> blockquote", has("<blockquote"));
   check("the toolbar shows the font and bold at the cursor", log.fontShown === "Georgia" && log.boldLit === true);
   check("the changed editor is posted", log.enabled === true);
+  check("a draft of the posted HTML is kept for a failed save (" + log.draft + ")", log.draft === true);
   check("an island is posted as it came",
     has("<span data-keep=\"1\" data-kind=\"actionhotspot\" contenteditable=\"false\"><b>hot</b></span>"));
   check("table: a row below and a column right (" + log.grown + ")", log.grown === "2x3");

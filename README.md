@@ -4,7 +4,7 @@ A Notes rich-text field on the web - edited from both ends. For HCL Domino web a
 
 Show a Notes rich-text field in a web page as Notes shows it, edit it in a WYSIWYG editor, and save it back **as classic Notes rich text** - so the same field can be edited from the Notes client and from the browser, and each end sees what the other did.
 
-Version 1.0.0 (2026-09-29). Java 8, tested on Domino 12. Apache License 2.0. See [CHANGELOG.md](CHANGELOG.md).
+Version 1.0.1 (2026-09-29). Java 8, tested on Domino 12. Apache License 2.0. See [CHANGELOG.md](CHANGELOG.md).
 
 ![The editor, showing a Notes body with fonts, a link, an attachment, a doclink, a picture and a table](docs/editor.png)
 
@@ -134,7 +134,7 @@ Every control writes only what maps back to Notes rich text:
 - Table menu: insert; row above/below; column left/right; delete row, column, table.
 - Horizontal rule, clear formatting, undo, redo, HTML source.
 
-The toolbar shows the font, size, list type and the active buttons at the cursor. Islands are grey and cannot be typed into; a paragraph hidden in Notes is hidden when reading and shown dimmed, marked, when editing.
+When the server refuses a save, the page comes back with the error and the editor's content is put back from a draft kept in the browser's session storage, so nothing typed is lost (files attached in that attempt must be attached again). The toolbar shows the font, size, list type and the active buttons at the cursor. Islands are grey and cannot be typed into; a paragraph hidden in Notes is hidden when reading and shown dimmed, marked, when editing.
 
 ## What round-trips
 

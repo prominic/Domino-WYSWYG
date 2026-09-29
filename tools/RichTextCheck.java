@@ -289,7 +289,7 @@ public class RichTextCheck {
 		System.out.println("        -> " + rt);
 		has("fresh", rt, "<font size='14pt' style='bold'/>Title", "one<break/>two", "list='bullet'", "<table widthtype='fitmargins'>",
 				"<tablecolumn width=", "align='center'", "leftmargin='1.5000in'", "<run highlight='yellow'><font color='#ff0000'/>red on yellow</run>",
-				" &amp; ", "href='https://x.test/?a=1&amp;b=2'", "<doclink document='ABCD' database='11112222:33334444' server='srv'/>");
+				" &amp; ", "href='https://x.test/?a=1&amp;b=2'", "<doclink document='ABCD' database='1111222233334444' server='srv'/>");
 		validate("editor-made body", rt);
 		System.out.println("WRITE - what the toolbar controls make (execCommand output as Chrome writes it)");
 		String controls = "<div><font face=\"Arial, sans-serif\" color=\"#ff0000\">def</font> <font face=\"Georgia\">geo</font></div>"
@@ -317,6 +317,28 @@ public class RichTextCheck {
 		validate("Edge-made body", rt);
 		String empty = (String) toDxl.invoke(null, "", dxl("Body", ""), "Body", FILES, null, null);
 		check("an emptied body is one empty paragraph", empty.matches("<richtext><pardef id='1'/><par def='1'/></richtext>"), empty);
+
+		System.out.println("WRITE - replica ids and the encryption guard, as the importer wants them");
+		String links = (String) toDxl.invoke(null, "<div><a href=\"notes://srv/1111222233334444/0/ABCD\">a</a></div>",
+				dxl("Body", "<par><doclink server='CN=s/O=x' database='86258E20:0059AA43' document='DDDD'/></par>"), "Body", FILES, null, null);
+		check("a new doclink's replica id has no colon", links.contains("database='1111222233334444'"), links);
+		String kept = (String) toDxl.invoke(null, "<div><a href=\"notes://s/86258E200059AA43/0/DDDD\">x</a></div>",
+				dxl("Body", "<par><doclink server='CN=s/O=x' database='86258E20:0059AA43' document='DDDD'/></par>"), "Body", FILES, null, null);
+		check("an original doclink's colon form is written without the colon", kept.contains("database='86258E200059AA43'") && !kept.contains(":0059"), kept);
+		Method exportable = kit.getDeclaredMethod("requireExportable", String.class);
+		exportable.setAccessible(true);
+		try {
+			exportable.invoke(null, "<document><item name='$FILE' summary='true' sign='true' seal='true'><object/></item></document>");
+			check("a $FILE's seal flag does not stop a save", true, "");
+		} catch (java.lang.reflect.InvocationTargetException e) {
+			check("a $FILE's seal flag does not stop a save", false, String.valueOf(e.getCause()));
+		}
+		try {
+			exportable.invoke(null, "<document><item name='$Seal'><text>x</text></item></document>");
+			check("an encrypted document ($Seal) stops a save", false, "no exception");
+		} catch (java.lang.reflect.InvocationTargetException e) {
+			check("an encrypted document ($Seal) stops a save", String.valueOf(e.getCause().getMessage()).contains("encrypted"), String.valueOf(e.getCause()));
+		}
 
 		System.out.println("WRITE - the document around it");
 		Method swap = kit.getDeclaredMethod("swapItem", String.class, String.class, String.class);
@@ -450,7 +472,7 @@ public class RichTextCheck {
 		System.out.println("        -> " + back.replaceAll("<gif>[^<]*</gif>", "<gif>...</gif>"));
 		has("fidelity written back", back, "list='alphaupper'", "list='check'",
 				"<table bgcolor='#ffffcc' cellborderstyle='ridge' colorstyle='solid' leftmargin='0.5in' rowdisplay='tabs' widthtype='fitmargins'><tablecolumn width='2in'/><tablecolumn width='1in'/><tablerow tablabel='Tab one'>",
-				"<picture height='50px' scaledheight='100px' scaledwidth='200px' width='100px'>");
+				"<picture height='50px' scaledheight='1.0417in' scaledwidth='2.0833in' width='100px'>");
 		validate("fidelity body", back);
 		String again = (String) render(render, dxlRich("Body", back), 1000000)[0];
 		check("fidelity: render(write(render)) == render", again.equals(html), again);
@@ -460,7 +482,7 @@ public class RichTextCheck {
 				.replace("width=\"200\" height=\"100\" data-pic=\"1\"", "width=\"50\" height=\"25\" data-pic=\"1\"")
 				.replace("<div data-pd=\"3\">y</div></td></tr>", "<div data-pd=\"3\">y</div></td><td>new</td></tr>");
 		back = (String) toDxl.invoke(null, edited, doc, "Body", FILES, null, null);
-		has("fidelity edits", back, "list='romanlower'", "list='bullet'", "scaledwidth='50px'", "scaledheight='25px'",
+		has("fidelity edits", back, "list='romanlower'", "list='bullet'", "scaledwidth='0.5208in'", "scaledheight='0.2604in'",
 				"rowdisplay='tabs'", "<tablecolumn width='", "<tablerow><tablecell");
 		lacks("fidelity edits", back, "check", "tablabel", "width='2in'");
 		validate("fidelity edited body", back);
@@ -494,8 +516,8 @@ public class RichTextCheck {
 		has("files", rt, "see <attachmentref name='report.pdf' displayname='report.pdf'><picture width='28px' height='34px'><png>iVBOR",
 				"<caption>report.pdf</caption></picture></attachmentref> and <attachmentref name='a (2).png'",
 				"<attachmentref name='x__y__z.txt'",
-				"<doclink document='ABCDEF0123456789ABCDEF0123456789' view='0123456789ABCDEF0123456789ABCDEF' database='86258E80:00474322'>other page</doclink>",
-				"<doclink document='ABCDEF0123456789ABCDEF0123456789' database='86258E80:00474322' server='notesserver'>notes</doclink>");
+				"<doclink document='ABCDEF0123456789ABCDEF0123456789' view='0123456789ABCDEF0123456789ABCDEF' database='86258E8000474322'>other page</doclink>",
+				"<doclink document='ABCDEF0123456789ABCDEF0123456789' database='86258E8000474322' server='notesserver'>notes</doclink>");
 		has("files stored", doc, "<item name='$FILE' summary='true'><object><file hosttype='msdos' compression='none' flags='storedindoc'"
 				+ " encoding='none' name='report.pdf' size='9'>", "<filedata>JVBERi0xLjQK</filedata>", "name='a (2).png' size='8'",
 				"name='x__y__z.txt' size='3'");
@@ -546,7 +568,7 @@ public class RichTextCheck {
 			+ "<table widthtype='fitmargins' cellborderstyle='ridge' colorstyle='solid' bgcolor='#ffffcc' rowdisplay='tabs' leftmargin='0.5in'>"
 			+ "<tablecolumn width='2in'/><tablecolumn width='1in'/><tablerow tablabel='Tab one'><tablecell borderwidth='0px' bgcolor='#eeeeee'><par def='3'>x</par></tablecell>"
 			+ "<tablecell><par def='3'>y</par></tablecell></tablerow></table>"
-			+ "<par def='3'>pic <picture width='100px' height='50px' scaledwidth='200px' scaledheight='100px'><gif>" + GIF + "</gif></picture></par>";
+			+ "<par def='3'>pic <picture width='100px' height='50px' scaledwidth='2.0833in' scaledheight='1.0417in'><gif>" + GIF + "</gif></picture></par>";
 
 	/* the reference test body of 2026-09-28, as its DXL would read, plus a tab */
 	static final String SCREENSHOT = "<pardef id='1'/>\n"
@@ -591,7 +613,7 @@ public class RichTextCheck {
 					"<tablecell><section><sectiontitle><text>In a cell</text></sectiontitle>" },
 			{ "fidelity", FIDELITY, "list='alphaupper'", "list='check'",
 					"<table bgcolor='#ffffcc' cellborderstyle='ridge' colorstyle='solid' leftmargin='0.5in' rowdisplay='tabs' widthtype='fitmargins'><tablecolumn width='2in'/><tablecolumn width='1in'/><tablerow tablabel='Tab one'>",
-					"<picture height='50px' scaledheight='100px' scaledwidth='200px' width='100px'>" } };
+					"<picture height='50px' scaledheight='1.0417in' scaledwidth='2.0833in' width='100px'>" } };
 
 	static Object[] render(Method m, String dxl, int budget) throws Exception {
 		return (Object[]) m.invoke(null, dxl, "Body", FILES, "86258E200059AA43", PAGE, budget,

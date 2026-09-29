@@ -1406,8 +1406,10 @@ public class RichText {
 	 * this many bytes of heap per character of it */
 	private static final int HEAP_PER_CHAR = 12;
 
-	/* the export must fit the heap, and hold no sealed (encrypted) item -
-	 * a web user has no key to write one back */
+	/* the export must fit the heap, and the document must not be encrypted -
+	 * a web user has no key to write it back. Encrypted = it holds a $Seal
+	 * or SecretEncryptionKeys item; the seal='true' flag on items only says
+	 * "encrypt me when the document is", and every $FILE carries it */
 	private static void requireExportable(String original) throws Exception {
 		long max = Runtime.getRuntime().maxMemory();
 		if (max != Long.MAX_VALUE && (long) original.length() * HEAP_PER_CHAR > max) {
@@ -1415,8 +1417,8 @@ public class RichText {
 					+ (original.length() / 1024 / 1024) + " MB as DXL; the server's Java heap is " + (max / 1024 / 1024)
 					+ " MB - HTTPJVMMaxHeapSize) - edit it in Notes");
 		}
-		if (original.contains(" seal='true'")) {
-			throw new Exception("This document has an encrypted field, which the web cannot write back - edit it in Notes");
+		if (original.contains("<item name='$Seal'") || original.contains("<item name='SecretEncryptionKeys'")) {
+			throw new Exception("This document is encrypted, which the web cannot write back - edit it in Notes");
 		}
 	}
 
@@ -1767,6 +1769,7 @@ public class RichText {
 			"div", "p", "center", "h1", "h2", "h3", "h4", "h5", "h6", "pre", "blockquote", "address",
 			"ul", "ol", "li", "table", "hr", "thead", "tbody", "tfoot", "tr", "td", "th", "caption"));
 	private static final Set<String> VOID_HTML = new HashSet<>(Arrays.asList("br", "hr", "img", "col"));
+	private static final Set<String> LINKS = new HashSet<>(Arrays.asList("doclink", "viewlink", "databaselink"));
 	private static final Pattern HTML_ATTR = Pattern.compile("([A-Za-z][A-Za-z0-9-]*)=\"([^\"]*)\"");
 	private static final Pattern DATA_URI = Pattern.compile("data:image/(png|gif|jpeg);base64,([A-Za-z0-9+/=]+)");
 	private static final HashMap<String, String> HEADING_SIZES = new HashMap<>();
@@ -2407,8 +2410,11 @@ public class RichText {
 				Node a = attrs.item(i);
 				String an = a.getNodeName();
 				if (!an.startsWith("xmlns")) {
-					sb.append(' ').append(an).append("='")
-							.append(xmlAttr(remap != null && an.equals(def) ? remap : a.getNodeValue())).append('\'');
+					String value = remap != null && an.equals(def) ? remap : a.getNodeValue();
+					if ("database".equals(an) && LINKS.contains(name)) {
+						value = replica(value); // a doclink inside an island
+					}
+					sb.append(' ').append(an).append("='").append(xmlAttr(value)).append('\'');
 				}
 			}
 			if (!e.hasChildNodes()) {
@@ -2575,7 +2581,9 @@ public class RichText {
 				int i = Integer.parseInt(n) - 1;
 				if (i >= 0 && i < orig.pictureElements.size()) {
 					// the picture as Notes had it - at a new size when the editor
-					// resized it (scaledwidth/height: the stored picture is untouched)
+					// resized it (scaledwidth/height: the stored picture is untouched).
+				// In INCHES: the importer refuses 'px' there ("Length value is
+				// invalid", live 2026-09-29) although the DTD allows it
 					Element pic = orig.pictureElements.get(i);
 					String w = img.attr("width");
 					String h = img.attr("height");
@@ -2583,8 +2591,8 @@ public class RichText {
 					if (w.matches("[0-9]{1,4}") && h.matches("[0-9]{1,4}")
 							&& !(w.equals(DxlBody.px(first(pic.getAttribute("scaledwidth"), pic.getAttribute("width"))))
 									&& h.equals(DxlBody.px(first(pic.getAttribute("scaledheight"), pic.getAttribute("height")))))) {
-						over.put("scaledwidth", w + "px");
-						over.put("scaledheight", h + "px");
+						over.put("scaledwidth", inches(Integer.parseInt(w)));
+						over.put("scaledheight", inches(Integer.parseInt(h)));
 					}
 					xmlWith(pic, over, par);
 					return;
@@ -2638,6 +2646,9 @@ public class RichText {
 				org.w3c.dom.NamedNodeMap map = original.getAttributes();
 				for (int i = 0; i < map.getLength(); i++) {
 					attrs.put(map.item(i).getNodeName(), map.item(i).getNodeValue());
+				}
+				if (attrs.containsKey("database")) {
+					attrs.put("database", replica(attrs.get("database")));
 				}
 			} else if (linkPrefix != null && href.startsWith(linkPrefix)) {
 				// a link to one of the app's pages: a doclink to that document
@@ -2957,9 +2968,12 @@ public class RichText {
 			return sb.toString();
 		}
 
-		/* a replica ID as DXL writes it: 86258E80:00474322 */
+		/* a replica ID as the importer takes it: 16 hex digits, no colon. The
+		 * colon form Notes displays (86258E80:00474322) is refused with
+		 * "Hexadecimal number value is invalid or too large" (live 2026-09-29) */
 		static String replica(String r) {
-			return r.matches("[0-9A-Fa-f]{16}") ? r.substring(0, 8) + ":" + r.substring(8) : r;
+			String plain = r.replace(":", "");
+			return plain.matches("[0-9A-Fa-f]{1,16}") ? plain : r;
 		}
 
 		static String urlDecode(String s) {
@@ -3057,7 +3071,7 @@ public class RichText {
 	/* ------------------------------------------------------------- reports */
 
 	/* the kit version, first line of every report (kit/CHANGELOG.md) */
-	public static final String VERSION = "1.0.0 (2026-09-29)";
+	public static final String VERSION = "1.0.1 (2026-09-29)";
 	private static final String KIT = "RichText kit " + VERSION;
 
 	/* a report section longer than this is cut */
